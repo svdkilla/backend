@@ -6,6 +6,7 @@ import { HttpOauthUrlSchema } from '../../contract/models/remnawave-settings/oau
 import { isSafePublicHeaderRegex } from '../../contract/models/response-rules/safe-regex';
 import { getButtonLinkError, getHttpUrlError } from '../models/button-link.validator';
 import { getCustomLinkUriError } from '../models/custom-link.validator';
+import { resolveCustomSubscriptionLinks } from '../models/custom-subscription-links.resolver';
 import { sanitizeLocalizedHtml } from '../models/localized-html-sanitizer';
 import { CustomLinkSchema } from '../models/subscription-page-config.schema';
 import { sanitizeSvg } from '../models/svg-sanitizer';
@@ -60,6 +61,69 @@ describe('custom link URI validation', () => {
                 uri: 'https://example.com/{{constructor}}',
             }).success,
         ).toBe(false);
+    });
+
+    it('adds only enabled VPN links to the main subscription list', () => {
+        const links = resolveCustomSubscriptionLinks(
+            [
+                {
+                    ...baseLink,
+                    id: 'website',
+                    mode: 'literal',
+                    uri: 'https://example.com/help',
+                },
+                {
+                    ...baseLink,
+                    id: 'custom-server',
+                    mode: 'template',
+                    order: 1,
+                    uri: 'vless://test@example.com:443?user={{username}}#Custom',
+                },
+                {
+                    ...baseLink,
+                    enabled: false,
+                    id: 'disabled-server',
+                    mode: 'literal',
+                    order: 2,
+                    uri: 'hy2://disabled@example.com:443',
+                },
+                {
+                    ...baseLink,
+                    id: 'existing-server-selector',
+                    mode: 'subscriptionLinks',
+                    order: 3,
+                    protocol: 'vless',
+                    uri: '',
+                },
+            ],
+            {
+                shortUuid: 'test-short-id',
+                subscriptionUrl: 'https://subscription.invalid/test-short-id',
+                username: 'test-user',
+            },
+        );
+
+        expect(links).toEqual(['vless://test@example.com:443?user=test-user#Custom']);
+    });
+
+    it('drops a resolved template if user data makes the URI unsafe', () => {
+        expect(
+            resolveCustomSubscriptionLinks(
+                [
+                    {
+                        ...baseLink,
+                        id: 'unsafe-after-resolution',
+                        mode: 'template',
+                        uri: 'vless://test@example.com:443#{{username}}',
+                    },
+                ],
+                {
+                    shortUuid: 'test-short-id',
+                    subscriptionUrl: 'https://subscription.invalid/test-short-id',
+                    username: 'test\r\nInjected',
+                },
+            ),
+        ).toEqual([]);
     });
 });
 

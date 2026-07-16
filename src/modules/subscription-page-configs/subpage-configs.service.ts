@@ -7,7 +7,11 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { fail, ok, TResult } from '@common/types';
 import { CRUD_ACTIONS, ERRORS, EVENTS, TCrudActions } from '@libs/contracts/constants';
 import { SUBPAGE_DEFAULT_CONFIG_UUID } from '@libs/subscription-page/constants';
-import { SubscriptionPageRawConfigSchema } from '@libs/subscription-page/models';
+import {
+    CustomSubscriptionLinkTemplateValues,
+    resolveCustomSubscriptionLinks,
+    SubscriptionPageRawConfigSchema,
+} from '@libs/subscription-page/models';
 import { cleanLocalizedTexts } from '@libs/subscription-page/models/subscription-page-config.validator';
 
 import { ServiceEvent } from '@integration-modules/notifications/interfaces';
@@ -53,6 +57,24 @@ export class SubscriptionPageConfigService {
         } catch (error) {
             this.logger.error(error);
             return fail(ERRORS.GET_SUBSCRIPTION_PAGE_CONFIG_BY_UUID_ERROR);
+        }
+    }
+
+    public async getResolvedCustomSubscriptionLinks(
+        uuid: string,
+        values: CustomSubscriptionLinkTemplateValues,
+    ): Promise<string[]> {
+        try {
+            const entity = await this.subscriptionPageConfigRepository.findByUUID(uuid);
+            if (!entity?.config) return [];
+
+            const parsed = await SubscriptionPageRawConfigSchema.safeParseAsync(entity.config);
+            if (!parsed.success) return [];
+
+            return resolveCustomSubscriptionLinks(parsed.data.customLinks, values);
+        } catch {
+            this.logger.error('Failed to resolve custom subscription links.');
+            return [];
         }
     }
 

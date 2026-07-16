@@ -14,6 +14,7 @@ import { HwidHeaders } from '@common/utils/extract-hwid-headers';
 import { TemplateEngine } from '@common/utils/templates/replace-templates-values';
 import { ERRORS, EVENTS, TSubscriptionTemplateType, USERS_STATUS } from '@libs/contracts/constants';
 import { isSafeHttpResponseHeader, THwidSettings } from '@libs/contracts/models';
+import { SUBPAGE_DEFAULT_CONFIG_UUID } from '@libs/subscription-page/constants';
 
 import { UserHwidDeviceEvent } from '@integration-modules/notifications/interfaces';
 
@@ -23,6 +24,7 @@ import { GetTemplateNameQuery } from '@modules/external-squads/queries/get-templ
 import { CreateWithAdvisoryLockCommand } from '@modules/hwid-user-devices/commands/create-with-advisory-lock';
 import { HwidUserDeviceEntity } from '@modules/hwid-user-devices/entities/hwid-user-device.entity';
 import { CheckHwidExistsQuery } from '@modules/hwid-user-devices/queries/check-hwid-exists';
+import { SubscriptionPageConfigService } from '@modules/subscription-page-configs/subpage-configs.service';
 import { ISRRContext } from '@modules/subscription-response-rules/interfaces';
 import { ResponseRulesMatcherService } from '@modules/subscription-response-rules/services/response-rules-matcher.service';
 import { SubscriptionSettingsEntity } from '@modules/subscription-settings/entities/subscription-settings.entity';
@@ -68,6 +70,7 @@ export class SubscriptionService {
         private readonly xrayGeneratorService: XrayGeneratorService,
         private readonly usersQueuesService: UsersQueuesService,
         private readonly srrMatcher: ResponseRulesMatcherService,
+        private readonly subscriptionPageConfigService: SubscriptionPageConfigService,
     ) {
         this.subPublicDomain = this.configService.getOrThrow('SUB_PUBLIC_DOMAIN');
     }
@@ -497,6 +500,15 @@ export class SubscriptionService {
                 });
 
                 xrayLinks = this.xrayGeneratorService.generateLinks(formattedHosts, false);
+
+                const customSubscriptionLinks = await this.getCustomSubscriptionLinks(userEntity);
+                const seenLinks = new Set(xrayLinks);
+                for (const link of customSubscriptionLinks) {
+                    if (!seenLinks.has(link)) {
+                        xrayLinks.push(link);
+                        seenLinks.add(link);
+                    }
+                }
             }
 
             return ok(await this.getUserInfo(userEntity, xrayLinks, ssConfLinks));
@@ -532,6 +544,22 @@ export class SubscriptionService {
             ssConfLinks,
             subscriptionUrl: this.resolveSubscriptionUrl(user.shortUuid),
         });
+    }
+
+    private async getCustomSubscriptionLinks(user: UserEntity): Promise<string[]> {
+        const configUuidResult = await this.queryBus.execute(
+            new GetUserSubpageConfigQuery(user.shortUuid),
+        );
+        if (!configUuidResult.isOk) return [];
+
+        return this.subscriptionPageConfigService.getResolvedCustomSubscriptionLinks(
+            configUuidResult.response ?? SUBPAGE_DEFAULT_CONFIG_UUID,
+            {
+                shortUuid: user.shortUuid,
+                subscriptionUrl: this.resolveSubscriptionUrl(user.shortUuid),
+                username: user.username,
+            },
+        );
     }
 
     public async getAllSubscriptions(query: GetAllSubscriptionsQueryDto): Promise<
