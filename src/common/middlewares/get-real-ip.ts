@@ -1,11 +1,8 @@
-import { getClientIp } from '@kastov/request-ip';
 import { NextFunction, Request, Response } from 'express';
 import morgan from 'morgan';
 
-import { REMNAWAVE_REAL_IP_HEADER } from '@libs/contracts/constants';
-
-morgan.token('remote-addr', (req: { clientIp: string } & Request) => {
-    return req.clientIp;
+morgan.token('remote-addr', (req: Request) => {
+    return req.ip || req.socket.remoteAddress || '0.0.0.0';
 });
 
 export const getRealIp = function (
@@ -13,12 +10,7 @@ export const getRealIp = function (
     res: Response,
     next: NextFunction,
 ) {
-    const ip = getClientIp(req, [REMNAWAVE_REAL_IP_HEADER]);
-    if (ip) {
-        req.clientIp = ip;
-    } else {
-        req.clientIp = '0.0.0.0';
-    }
+    req.clientIp = req.ip || req.socket.remoteAddress || '0.0.0.0';
 
     next();
 };

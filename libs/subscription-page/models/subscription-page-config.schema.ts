@@ -12,11 +12,13 @@ import {
     MAX_CUSTOM_LINKS,
     LANGUAGE_CODES,
 } from '../constants';
+import { getButtonLinkError, getHttpUrlError } from './button-link.validator';
 import {
     getCustomLinkTemplateError,
     getCustomLinkUriError,
     containsHtmlMarkup,
 } from './custom-link.validator';
+import { MAX_LOCALIZED_HTML_LENGTH, sanitizeLocalizedHtml } from './localized-html-sanitizer';
 import {
     validateLocalizedTexts,
     validateSvgReferences,
@@ -24,7 +26,10 @@ import {
 import { MAX_SVG_SOURCE_LENGTH, sanitizeSvg } from './svg-sanitizer';
 
 const LocalizedTextSchema = z
-    .record(z.string().regex(/^[a-z]{2}$/, 'Language code must be 2 lowercase letters'), z.string())
+    .record(
+        z.string().regex(/^[a-z]{2}$/, 'Language code must be 2 lowercase letters'),
+        z.string().max(MAX_LOCALIZED_HTML_LENGTH).transform(sanitizeLocalizedHtml),
+    )
     .refine((obj) => Object.keys(obj).length > 0, {
         message: 'At least one language must be specified',
     });
@@ -107,12 +112,19 @@ export const CustomLinkSchema = z
         }
     });
 
-const ButtonSchema = z.object({
-    link: z.string(),
-    type: z.nativeEnum(BUTTON_TYPES),
-    text: LocalizedTextSchema,
-    svgIconKey: z.string(),
-});
+const ButtonSchema = z
+    .object({
+        link: z.string(),
+        type: z.nativeEnum(BUTTON_TYPES),
+        text: LocalizedTextSchema,
+        svgIconKey: z.string(),
+    })
+    .superRefine((value, ctx) => {
+        const error = getButtonLinkError(value.link, value.type);
+        if (error) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: error, path: ['link'] });
+        }
+    });
 
 const BlockSchema = z.object({
     svgIconKey: z.string(),
@@ -160,9 +172,13 @@ const PlatformSchema = z.object({
 });
 
 const BrandingSettingsSchema = z.object({
-    title: z.string(),
-    logoUrl: z.string(),
-    supportUrl: z.string().url(),
+    title: z.string().max(256),
+    logoUrl: z.string().refine((value) => !getHttpUrlError(value, true), {
+        message: 'Logo URL must be empty or use HTTP(S)',
+    }),
+    supportUrl: z.string().refine((value) => !getHttpUrlError(value), {
+        message: 'Support URL must use HTTP(S)',
+    }),
 });
 
 const UiConfigSchema = z.object({
@@ -194,8 +210,8 @@ const SubscriptionPageTranslateKeysSchema = z.object({
 
 const BaseSettingsSchema = z
     .object({
-        metaTitle: z.string().default('Subscription'),
-        metaDescription: z.string().default('Subscription'),
+        metaTitle: z.string().max(256).default('Subscription'),
+        metaDescription: z.string().max(1_024).default('Subscription'),
         showConnectionKeys: z.boolean().default(false),
         hideGetLinkButton: z.boolean().default(false),
     })

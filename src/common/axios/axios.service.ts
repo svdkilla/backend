@@ -87,7 +87,7 @@ export class AxiosService {
 
             this.logger.log('Axios interceptor registered');
         } catch (error) {
-            this.logger.error(`Error in onApplicationBootstrap: ${error}`);
+            this.logger.error('Failed to initialize the node transport credentials.');
             throw error;
         }
     }
@@ -155,18 +155,7 @@ export class AxiosService {
 
             return ok(response.data);
         } catch (error) {
-            if (error instanceof AxiosError) {
-                // this.logger.error(
-                //     'Error in Axios StartXray Request:',
-                //     JSON.stringify(error.message),
-                // );
-
-                return fail(ERRORS.NODE_ERROR_WITH_MSG.withMessage(JSON.stringify(error.message)));
-            } else {
-                this.logger.error('Error in Axios StartXray Request:', error);
-
-                return fail(ERRORS.NODE_ERROR_WITH_MSG.withMessage(JSON.stringify(error)));
-            }
+            return this.failNodeRequest('Start Xray request', error);
         }
     }
 
@@ -179,22 +168,7 @@ export class AxiosService {
 
             return ok(response.data);
         } catch (error) {
-            if (error instanceof AxiosError) {
-                this.logger.error(
-                    'Error in Axios StopXray Request:',
-                    JSON.stringify(error.message),
-                );
-
-                return fail(ERRORS.NODE_ERROR_WITH_MSG.withMessage(JSON.stringify(error.message)));
-            } else {
-                this.logger.error('Error in Axios StopXray Request:', error);
-
-                return fail(
-                    ERRORS.NODE_ERROR_WITH_MSG.withMessage(
-                        JSON.stringify(error) ?? 'Unknown error',
-                    ),
-                );
-            }
+            return this.failNodeRequest('Stop Xray request', error);
         }
     }
 
@@ -213,17 +187,7 @@ export class AxiosService {
 
             return ok(data.response);
         } catch (error) {
-            if (error instanceof AxiosError) {
-                return fail(ERRORS.NODE_ERROR_WITH_MSG.withMessage(JSON.stringify(error.message)));
-            } else {
-                this.logger.error('Error in Axios getNodeHealth:', error);
-
-                return fail(
-                    ERRORS.NODE_ERROR_WITH_MSG.withMessage(
-                        JSON.stringify(error) ?? 'Unknown error',
-                    ),
-                );
-            }
+            return this.failNodeRequest('Node health request', error);
         }
     }
 
@@ -249,21 +213,7 @@ export class AxiosService {
 
             return ok(response.data);
         } catch (error) {
-            if (error instanceof AxiosError) {
-                this.logger.error(
-                    `Error in Axios getUsersStats: ${error.message}, JSON: ${JSON.stringify(error.response?.data)}`,
-                );
-
-                return fail(ERRORS.NODE_ERROR_WITH_MSG.withMessage(JSON.stringify(error.message)));
-            } else {
-                this.logger.error('Error in getUsersStats:', error);
-
-                return fail(
-                    ERRORS.NODE_ERROR_WITH_MSG.withMessage(
-                        JSON.stringify(error) ?? 'Unknown error',
-                    ),
-                );
-            }
+            return this.failNodeRequest('User statistics request', error);
         }
     }
 
@@ -285,17 +235,7 @@ export class AxiosService {
 
             return ok(response.data);
         } catch (error) {
-            if (error instanceof AxiosError) {
-                return fail(ERRORS.NODE_ERROR_WITH_MSG.withMessage(JSON.stringify(error.message)));
-            } else {
-                this.logger.error('Error in getIpsList:', error);
-
-                return fail(
-                    ERRORS.NODE_ERROR_WITH_MSG.withMessage(
-                        JSON.stringify(error) ?? 'Unknown error',
-                    ),
-                );
-            }
+            return this.failNodeRequest('User IP list request', error);
         }
     }
 
@@ -316,17 +256,7 @@ export class AxiosService {
 
             return ok(response.data);
         } catch (error) {
-            if (error instanceof AxiosError) {
-                return fail(ERRORS.NODE_ERROR_WITH_MSG.withMessage(JSON.stringify(error.message)));
-            } else {
-                this.logger.error('Error in getUsersIpsList:', error);
-
-                return fail(
-                    ERRORS.NODE_ERROR_WITH_MSG.withMessage(
-                        JSON.stringify(error) ?? 'Unknown error',
-                    ),
-                );
-            }
+            return this.failNodeRequest('Users IP list request', error);
         }
     }
 
@@ -343,25 +273,7 @@ export class AxiosService {
 
             return ok(response.data);
         } catch (error) {
-            if (error instanceof AxiosError) {
-                // this.logger.error(`Error in axios request: ${JSON.stringify(error.message)}`);
-
-                if (error.code === '500') {
-                    return fail(
-                        ERRORS.NODE_ERROR_500_WITH_MSG.withMessage(JSON.stringify(error.message)),
-                    );
-                }
-
-                return fail(ERRORS.NODE_ERROR_WITH_MSG.withMessage(JSON.stringify(error.message)));
-            } else {
-                this.logger.error('Error in getSystemStats:', error);
-
-                return fail(
-                    ERRORS.NODE_ERROR_WITH_MSG.withMessage(
-                        JSON.stringify(error) ?? 'Unknown error',
-                    ),
-                );
-            }
+            return this.failNodeRequest('System statistics request', error);
         }
     }
 
@@ -382,23 +294,7 @@ export class AxiosService {
 
             return ok(nodeResult.data.response);
         } catch (error) {
-            if (error instanceof AxiosError) {
-                if (error.code === '500') {
-                    return fail(
-                        ERRORS.NODE_ERROR_500_WITH_MSG.withMessage(JSON.stringify(error.message)),
-                    );
-                }
-
-                return fail(ERRORS.NODE_ERROR_WITH_MSG.withMessage(JSON.stringify(error.message)));
-            } else {
-                this.logger.error('Error in getAllInboundStats:', error);
-
-                return fail(
-                    ERRORS.NODE_ERROR_WITH_MSG.withMessage(
-                        JSON.stringify(error) ?? 'Unknown error',
-                    ),
-                );
-            }
+            return this.failNodeRequest('Combined statistics request', error);
         }
     }
 
@@ -420,19 +316,7 @@ export class AxiosService {
 
             return ok(response.data);
         } catch (error) {
-            if (error instanceof AxiosError) {
-                this.logger.error(`Error in axios request: ${error.message}`);
-
-                return fail(ERRORS.NODE_ERROR_WITH_MSG.withMessage(JSON.stringify(error.message)));
-            } else {
-                this.logger.error('Error in addUser:', error);
-
-                return fail(
-                    ERRORS.NODE_ERROR_WITH_MSG.withMessage(
-                        JSON.stringify(error) ?? 'Unknown error',
-                    ),
-                );
-            }
+            return this.failNodeRequest('Add user request', error);
         }
     }
 
@@ -450,13 +334,7 @@ export class AxiosService {
 
             return ok(response.data);
         } catch (error) {
-            if (error instanceof AxiosError) {
-                this.logger.error('Error in deleteUser:', error.response?.data);
-            } else {
-                this.logger.error('Error in deleteUser:', error);
-            }
-
-            return fail(ERRORS.INTERNAL_SERVER_ERROR);
+            return this.failNodeRequest('Delete user request', error, true);
         }
     }
 
@@ -488,19 +366,7 @@ export class AxiosService {
 
             return ok(response.data);
         } catch (error) {
-            if (error instanceof AxiosError) {
-                this.logger.error(`Error in axios request: ${error.message}`);
-
-                return fail(ERRORS.NODE_ERROR_WITH_MSG.withMessage(JSON.stringify(error.message)));
-            } else {
-                this.logger.error('Error in addUser:', error);
-
-                return fail(
-                    ERRORS.NODE_ERROR_WITH_MSG.withMessage(
-                        JSON.stringify(error) ?? 'Unknown error',
-                    ),
-                );
-            }
+            return this.failNodeRequest('Add users request', error);
         }
     }
 
@@ -532,13 +398,7 @@ export class AxiosService {
 
             return ok(response.data);
         } catch (error) {
-            if (error instanceof AxiosError) {
-                this.logger.error('Error in deleteUser:', error.response?.data);
-            } else {
-                this.logger.error('Error in deleteUser:', error);
-            }
-
-            return fail(ERRORS.INTERNAL_SERVER_ERROR);
+            return this.failNodeRequest('Delete users request', error, true);
         }
     }
 
@@ -560,19 +420,7 @@ export class AxiosService {
 
             return ok(response.data);
         } catch (error) {
-            if (error instanceof AxiosError) {
-                this.logger.error(`Error in axios dropUsersConnections request: ${error.message}`);
-
-                return fail(ERRORS.NODE_ERROR_WITH_MSG.withMessage(JSON.stringify(error.message)));
-            } else {
-                this.logger.error('Error in dropUsersConnections:', error);
-
-                return fail(
-                    ERRORS.NODE_ERROR_WITH_MSG.withMessage(
-                        JSON.stringify(error) ?? 'Unknown error',
-                    ),
-                );
-            }
+            return this.failNodeRequest('Drop users connections request', error);
         }
     }
 
@@ -590,19 +438,7 @@ export class AxiosService {
 
             return ok(response.data);
         } catch (error) {
-            if (error instanceof AxiosError) {
-                this.logger.error(`Error in axios dropIpsConnections request: ${error.message}`);
-
-                return fail(ERRORS.NODE_ERROR_WITH_MSG.withMessage(JSON.stringify(error.message)));
-            } else {
-                this.logger.error('Error in dropIpsConnections:', error);
-
-                return fail(
-                    ERRORS.NODE_ERROR_WITH_MSG.withMessage(
-                        JSON.stringify(error) ?? 'Unknown error',
-                    ),
-                );
-            }
+            return this.failNodeRequest('Drop IP connections request', error);
         }
     }
 
@@ -634,13 +470,7 @@ export class AxiosService {
 
             return ok(response.data);
         } catch (error) {
-            if (error instanceof AxiosError) {
-                return fail(ERRORS.NODE_ERROR_WITH_MSG.withMessage(JSON.stringify(error.message)));
-            } else {
-                this.logger.error('Error in Axios SyncNodePlugins Request:', error);
-
-                return fail(ERRORS.NODE_ERROR_WITH_MSG.withMessage(JSON.stringify(error)));
-            }
+            return this.failNodeRequest('Sync node plugins request', error);
         }
     }
 
@@ -661,13 +491,7 @@ export class AxiosService {
 
             return ok(response.data.response);
         } catch (error) {
-            if (error instanceof AxiosError) {
-                return fail(ERRORS.NODE_ERROR_WITH_MSG.withMessage(JSON.stringify(error.message)));
-            } else {
-                this.logger.error('Error in Axios CollectTorrentBlockerReports Request:', error);
-
-                return fail(ERRORS.NODE_ERROR_WITH_MSG.withMessage(JSON.stringify(error)));
-            }
+            return this.failNodeRequest('Collect torrent blocker reports request', error);
         }
     }
 
@@ -685,19 +509,7 @@ export class AxiosService {
 
             return ok(response.data);
         } catch (error) {
-            if (error instanceof AxiosError) {
-                this.logger.error(`Error in axios blockIps request: ${error.message}`);
-
-                return fail(ERRORS.NODE_ERROR_WITH_MSG.withMessage(JSON.stringify(error.message)));
-            } else {
-                this.logger.error('Error in blockIps:', error);
-
-                return fail(
-                    ERRORS.NODE_ERROR_WITH_MSG.withMessage(
-                        JSON.stringify(error) ?? 'Unknown error',
-                    ),
-                );
-            }
+            return this.failNodeRequest('Block IPs request', error);
         }
     }
 
@@ -715,19 +527,7 @@ export class AxiosService {
 
             return ok(response.data);
         } catch (error) {
-            if (error instanceof AxiosError) {
-                this.logger.error(`Error in axios unblockIps request: ${error.message}`);
-
-                return fail(ERRORS.NODE_ERROR_WITH_MSG.withMessage(JSON.stringify(error.message)));
-            } else {
-                this.logger.error('Error in unblockIps:', error);
-
-                return fail(
-                    ERRORS.NODE_ERROR_WITH_MSG.withMessage(
-                        JSON.stringify(error) ?? 'Unknown error',
-                    ),
-                );
-            }
+            return this.failNodeRequest('Unblock IPs request', error);
         }
     }
 
@@ -748,20 +548,35 @@ export class AxiosService {
 
             return ok(response.data);
         } catch (error) {
-            if (error instanceof AxiosError) {
-                this.logger.error(`Error in axios recreateTables request: ${error.message}`);
-
-                return fail(ERRORS.NODE_ERROR_WITH_MSG.withMessage(JSON.stringify(error.message)));
-            } else {
-                this.logger.error('Error in recreateTables:', error);
-
-                return fail(
-                    ERRORS.NODE_ERROR_WITH_MSG.withMessage(
-                        JSON.stringify(error) ?? 'Unknown error',
-                    ),
-                );
-            }
+            return this.failNodeRequest('Recreate tables request', error);
         }
+    }
+
+    private failNodeRequest<T>(
+        operation: string,
+        error: unknown,
+        internalError = false,
+    ): TResult<T> {
+        let status: number | undefined;
+        let code: string | undefined;
+        if (error instanceof AxiosError) {
+            status = error.response?.status;
+            code = error.code;
+        }
+
+        const diagnostic = [
+            status ? `HTTP ${status}` : undefined,
+            code ? `code ${code.replace(/[^A-Za-z0-9_-]/gu, '').slice(0, 64)}` : undefined,
+        ]
+            .filter(Boolean)
+            .join(', ');
+        this.logger.error(`${operation} failed${diagnostic ? ` (${diagnostic})` : ''}.`);
+
+        if (internalError) return fail(ERRORS.INTERNAL_SERVER_ERROR);
+        if (status === 500 || code === '500') {
+            return fail(ERRORS.NODE_ERROR_500_WITH_MSG.withMessage('Node request failed.'));
+        }
+        return fail(ERRORS.NODE_ERROR_WITH_MSG.withMessage('Node request failed.'));
     }
 
     private async compressData(data: any): Promise<Buffer> {

@@ -98,7 +98,8 @@ COPY --chown=node:node prisma.config.ts ./prisma.config.ts
 COPY --chown=node:node ecosystem.config.js ./
 COPY --chown=node:node docker-entrypoint.sh ./
 
-RUN npm install pm2 -g \
+RUN npm install --global pm2@7.0.3 \
+    && npm cache clean --force \
     && npm link
 
 USER node

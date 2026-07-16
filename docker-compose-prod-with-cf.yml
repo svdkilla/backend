@@ -23,7 +23,7 @@ services:
     container_name: 'remnawave-db'
     hostname: remnawave-db
     shm_size: 512mb
-    <<: [*common, *logging, *env]
+    <<: [*common, *logging]
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -44,6 +44,16 @@ services:
     container_name: 'remnawave'
     hostname: remnawave
     <<: [*common, *logging, *env]
+    init: true
+    user: '1000:1000'
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    pids_limit: 512
     ports:
       - '127.0.0.1:3000:${APP_PORT:-3000}'
       - '127.0.0.1:3001:${METRICS_PORT:-3001}'
@@ -79,8 +89,16 @@ services:
   remnawave-cloudflared:
     container_name: remnawave-cloudflared
     image: cloudflare/cloudflared:latest
-    <<: [*common, *logging, *env]
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TOKEN}
+    <<: [*common, *logging]
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 128
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TOKEN}
+    command: tunnel --no-autoupdate run
     depends_on:
       - remnawave
 

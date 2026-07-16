@@ -1,12 +1,10 @@
 import { hasher } from 'node-object-hash';
-import { readFileSync } from 'node:fs';
 import {
     BalancingRule,
     InboundConfig,
     RoutingRule,
     ShadowsocksInboundConfig,
     sortXrayConfig,
-    TLSCertConfig,
     TrojanInboundConfig,
     VLessInboundConfig,
     XrayConfig,
@@ -18,6 +16,7 @@ import { getVlessFlow } from '@common/utils/flow/get-vless-flow';
 
 import { UserForConfigEntity } from '@modules/users/entities/users-for-config';
 
+import { assertInlineCertificatesOnly } from './certificate-security';
 import { getSsPassword, isSS2022MethodFromMethod, SHADOWSOCKS_METHODS } from './ss-cipher';
 
 const MANAGED_CLIENT_PROTOCOLS = new Set(['hysteria', 'shadowsocks', 'trojan', 'vless']);
@@ -111,45 +110,9 @@ export class XRayConfig {
     }
 
     public processCertificates(): XrayConfig {
-        if (!this.config.inbounds) return this.config;
-
-        for (const inbound of this.config.inbounds) {
-            const certs = inbound.streamSettings?.tlsSettings?.certificates;
-            if (!certs) continue;
-
-            inbound.streamSettings!.tlsSettings!.certificates = certs.map((cert) =>
-                this.resolveCertificate(cert),
-            );
-        }
-
+        // Certificate material must be inline. File references are rejected in validate()
+        // because config profiles can be supplied through the HTTP API.
         return this.config;
-    }
-
-    private resolveCertificate(cert: TLSCertConfig): TLSCertConfig {
-        try {
-            const resolved = { ...cert };
-
-            if (resolved.certificateFile) {
-                resolved.certificate = this.readPemLines(resolved.certificateFile);
-                delete resolved.certificateFile;
-            }
-
-            if (resolved.keyFile) {
-                resolved.key = this.readPemLines(resolved.keyFile);
-                delete resolved.keyFile;
-            }
-
-            return resolved;
-        } catch {
-            return cert;
-        }
-    }
-
-    private readPemLines(filePath: string): string[] {
-        return readFileSync(filePath, 'utf-8')
-            .replace(/\r\n/g, '\n')
-            .split('\n')
-            .filter((line) => line);
     }
 
     private hasManagedClients(inbound: InboundConfig): inbound is {
@@ -383,7 +346,15 @@ export class XRayConfig {
             this.validateProtocol(inbound);
             this.validateTag(inbound, seenTags);
             this.validateShadowsocks(inbound);
+            this.validateCertificateSources(inbound);
         }
+    }
+
+    private validateCertificateSources(inbound: InboundConfig): void {
+        const certificates = inbound.streamSettings?.tlsSettings?.certificates;
+        if (!certificates) return;
+
+        assertInlineCertificatesOnly(certificates);
     }
 
     private validateNetwork(inbound: InboundConfig): void {

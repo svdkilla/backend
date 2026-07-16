@@ -8,6 +8,7 @@ export * from './extended-users.schema';
 export * from './external-squad.schema';
 export * from './external-squads';
 export * from './hosts.schema';
+export * from './http-response-headers.schema';
 export * from './hwid-user-device.schema';
 export * from './infra-billing-available-node.schema';
 export * from './infra-billing-history-record.schema';

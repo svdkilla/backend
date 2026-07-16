@@ -98,6 +98,7 @@
     "dayjs": "^1.11.21",
     "dotenv": "^17.4.2",
     "enhanced-ms": "^4.3.0",
+    "express-rate-limit": "8.5.2",
     "gradient-string": "^3.0.0",
     "helmet": "^8.2.0",
     "husky": "9.1.7",

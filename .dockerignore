@@ -1,0 +1,16 @@
+.git
+.github
+.env
+.env.*
+!.env.sample
+.npmrc
+.yarnrc*
+node_modules
+dist
+coverage
+test-results
+**/*.log
+**/*.key
+**/*.pem
+**/secrets
+*.local

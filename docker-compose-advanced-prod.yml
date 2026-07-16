@@ -20,9 +20,21 @@ x-logging: &logging
 x-env: &env
   env_file: .env
 
+x-backend-security: &backend-security
+  init: true
+  user: '1000:1000'
+  read_only: true
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  tmpfs:
+    - /tmp:rw,noexec,nosuid,size=64m
+  pids_limit: 512
+
 services:
   remnawave-rest-api: # Scaling is OK
-    <<: [*base, *common, *logging, *env]
+    <<: [*base, *common, *logging, *env, *backend-security]
     container_name: 'remnawave-rest-api'
     hostname: remnawave-rest-api
     entrypoint: []
@@ -38,7 +50,7 @@ services:
       - '127.0.0.1:3000:3000' # Expose Rest API port
 
   remnawave-scheduler: # Do not scale this service!
-    <<: [*base, *common, *logging, *env]
+    <<: [*base, *common, *logging, *env, *backend-security]
     container_name: 'remnawave-scheduler'
     hostname: remnawave-scheduler
     entrypoint: ['/bin/sh', 'docker-entrypoint.sh'] # Migrations, seeding, etc. IMPORTANT: Entrypoint needs to be in one of services. Its applies migrations and seeding database!
@@ -58,7 +70,7 @@ services:
       start_period: 30s
 
   remnawave-processor: # Scaling is OK
-    <<: [*base, *common, *logging, *env]
+    <<: [*base, *common, *logging, *env, *backend-security]
     container_name: 'remnawave-processor'
     hostname: remnawave-processor
     entrypoint: []
@@ -76,7 +88,7 @@ services:
     container_name: 'remnawave-db'
     hostname: remnawave-db
     shm_size: 512mb
-    <<: [*common, *logging, *env]
+    <<: [*common, *logging]
 
     environment:
       - POSTGRES_USER=${POSTGRES_USER}

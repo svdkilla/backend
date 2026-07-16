@@ -11,6 +11,7 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
 import { json } from 'express';
+import { rateLimit } from 'express-rate-limit';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { utilities as nestWinstonModuleUtilities, WinstonModule } from 'nest-winston';
@@ -22,7 +23,13 @@ import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 
 import { TypedConfigService } from '@common/config/app-config/typed-config.service';
-import { proxyCheckMiddleware, getRealIp, noRobotsMiddleware } from '@common/middlewares';
+import {
+    createPanelHostGuard,
+    createPublicPanelRequestGuard,
+    getRealIp,
+    noRobotsMiddleware,
+    proxyCheckMiddleware,
+} from '@common/middlewares';
 import { customLogFilter } from '@common/utils/filter-logs';
 import { getDocs, isDevelopment, isDevOrDebugLogsEnabled } from '@common/utils/startup-app';
 import { getStartMessage } from '@common/utils/startup-app/get-start-message';
@@ -75,9 +82,29 @@ async function bootstrap(): Promise<void> {
 
     app.disable('x-powered-by');
 
-    app.use(json({ limit: '100mb' }));
-
     const config = app.get(TypedConfigService);
+
+    app.set('trust proxy', config.getOrThrow('TRUST_PROXY'));
+    app.use(json({ limit: '4mb' }));
+    app.use(
+        rateLimit({
+            windowMs: 60_000,
+            limit: 300,
+            standardHeaders: 'draft-8',
+            legacyHeaders: false,
+            message: { statusCode: 429, message: 'Too many requests' },
+        }),
+    );
+    app.use(
+        ROOT + '/auth',
+        rateLimit({
+            windowMs: 15 * 60_000,
+            limit: 30,
+            standardHeaders: 'draft-8',
+            legacyHeaders: false,
+            message: { statusCode: 429, message: 'Too many authentication requests' },
+        }),
+    );
 
     if (!isDevelopment()) {
         app.use(
@@ -116,7 +143,16 @@ async function bootstrap(): Promise<void> {
         );
     }
 
-    app.use(noRobotsMiddleware, proxyCheckMiddleware);
+    app.use(
+        createPanelHostGuard(config.get('ALLOWED_HOSTS') ?? config.get('PANEL_DOMAIN')),
+        createPublicPanelRequestGuard([
+            ROOT,
+            config.getOrThrow('SWAGGER_PATH'),
+            config.getOrThrow('SCALAR_PATH'),
+        ]),
+        noRobotsMiddleware,
+        proxyCheckMiddleware,
+    );
 
     app.setGlobalPrefix(ROOT);
 

@@ -4,6 +4,7 @@ import {
     RESPONSE_RULES_CONDITION_OPERATORS,
     RESPONSE_RULES_CONDITION_OPERATORS_DESCRIPTION,
 } from '../../constants';
+import { isSafePublicHeaderRegex } from './safe-regex';
 
 export const ResponseRuleConditionSchema = z
     .object({
@@ -44,6 +45,19 @@ export const ResponseRuleConditionSchema = z
                     'Whether the value is **case sensitive**. \n\n - `true`: the value will be compared as is. \n\n - `false`: the value will be lowercased **before** comparison.',
             }),
         ),
+    })
+    .superRefine((condition, context) => {
+        if (
+            (condition.operator === RESPONSE_RULES_CONDITION_OPERATORS.REGEX ||
+                condition.operator === RESPONSE_RULES_CONDITION_OPERATORS.NOT_REGEX) &&
+            !isSafePublicHeaderRegex(condition.value)
+        ) {
+            context.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'Regex is unsafe for public header matching',
+                path: ['value'],
+            });
+        }
     })
     .describe(
         JSON.stringify({

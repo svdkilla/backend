@@ -170,6 +170,7 @@ export class ResponseRulesMiddleware implements NestMiddleware {
                 let compiled = this.regexCache.get(pattern);
                 if (!compiled) {
                     compiled = new RegExp(pattern);
+                    if (this.regexCache.size >= 128) this.regexCache.clear();
                     this.regexCache.set(pattern, compiled);
                 }
                 if (compiled.test(userAgent)) {

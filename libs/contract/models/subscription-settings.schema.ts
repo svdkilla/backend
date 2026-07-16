@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { HttpResponseHeadersSchema } from './http-response-headers.schema';
 import { ResponseRulesConfigSchema } from './response-rules';
 import { CustomRemarksSchema } from './subscription-settings/custom-remarks.schema';
 import { HwidSettingsSchema } from './subscription-settings/hwid-settings.schema';
@@ -23,7 +24,7 @@ export const SubscriptionSettingsSchema = z.object({
     happAnnounce: z.string().nullable(),
     happRouting: z.string().nullable(),
 
-    customResponseHeaders: z.nullable(z.record(z.string(), z.string())),
+    customResponseHeaders: HttpResponseHeadersSchema.nullable(),
 
     randomizeHosts: z.boolean(),
 

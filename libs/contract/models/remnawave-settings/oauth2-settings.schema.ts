@@ -1,5 +1,34 @@
 import z from 'zod';
 
+const hasControlCharacter = (value: string): boolean =>
+    [...value].some((character) => {
+        const code = character.charCodeAt(0);
+        return code <= 0x1f || code === 0x7f;
+    });
+
+export const HttpOauthUrlSchema = z
+    .string()
+    .max(2_048)
+    .refine((value) => {
+        if (hasControlCharacter(value)) return false;
+        try {
+            const decoded = decodeURIComponent(value);
+            if (hasControlCharacter(decoded)) return false;
+            if (/%[0-9A-Fa-f]{2}/u.test(decoded) && decodeURIComponent(decoded) !== decoded) {
+                return false;
+            }
+            const parsed = new URL(value);
+            return (
+                ['http:', 'https:'].includes(parsed.protocol) &&
+                Boolean(parsed.hostname) &&
+                !parsed.username &&
+                !parsed.password
+            );
+        } catch {
+            return false;
+        }
+    }, 'Must be an HTTP(S) URL without credentials or control characters');
+
 export const Oauth2SettingsSchema = z.object({
     github: z.object({
         enabled: z.boolean(),
@@ -92,8 +121,8 @@ export const Oauth2SettingsSchema = z.object({
             clientId: z.nullable(z.string()),
             clientSecret: z.nullable(z.string()),
             withPkce: z.boolean(),
-            authorizationUrl: z.nullable(z.string()),
-            tokenUrl: z.nullable(z.string()),
+            authorizationUrl: HttpOauthUrlSchema.nullable(),
+            tokenUrl: HttpOauthUrlSchema.nullable(),
 
             frontendDomain: z.nullable(
                 z.string().refine(

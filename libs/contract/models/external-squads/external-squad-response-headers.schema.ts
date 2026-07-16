@@ -1,3 +1,3 @@
-import { z } from 'zod';
+import { HttpResponseHeadersSchema } from '../http-response-headers.schema';
 
-export const ExternalSquadResponseHeadersSchema = z.nullable(z.record(z.string(), z.string()));
+export const ExternalSquadResponseHeadersSchema = HttpResponseHeadersSchema.nullable();

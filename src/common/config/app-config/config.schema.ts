@@ -10,6 +10,20 @@ const booleanString = (def: 'true' | 'false' = 'false') =>
         .transform((val) => val === 'true')
         .pipe(z.boolean());
 
+const TRUST_PROXY_DEFAULT = '1';
+const isTrustProxy = (value: string): boolean =>
+    value === 'true' ||
+    value === 'false' ||
+    /^\d+$/u.test(value) ||
+    value
+        .split(',')
+        .map((part) => part.trim())
+        .every(
+            (part) =>
+                ['loopback', 'linklocal', 'uniquelocal'].includes(part) ||
+                /^(?:[0-9A-Fa-f:.]+)(?:\/\d{1,3})?$/u.test(part),
+        );
+
 export const configSchema = z
     .object({
         __RW_METADATA_VERSION: z.string().default('1.1.1'),
@@ -62,6 +76,18 @@ export const configSchema = z
 
         FRONT_END_DOMAIN: z.string(),
         PANEL_DOMAIN: z.string().optional(),
+        ALLOWED_HOSTS: z.string().optional(),
+        TRUST_PROXY: z
+            .string()
+            .default(TRUST_PROXY_DEFAULT)
+            .transform((value) => (value.trim() === '' ? TRUST_PROXY_DEFAULT : value.trim()))
+            .refine(isTrustProxy, 'TRUST_PROXY has an invalid value')
+            .transform((value): boolean | number | string => {
+                if (value === 'true') return true;
+                if (value === 'false') return false;
+                if (/^\d+$/u.test(value)) return Number(value);
+                return value;
+            }),
         IS_DOCS_ENABLED: booleanString('false'),
         SCALAR_PATH: z.string().default('/scalar'),
         SWAGGER_PATH: z.string().default('/docs'),

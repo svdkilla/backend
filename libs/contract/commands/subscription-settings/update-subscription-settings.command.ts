@@ -5,6 +5,7 @@ import { getEndpointDetails } from '../../constants';
 import {
     CustomRemarksSchema,
     HwidSettingsSchema,
+    HttpResponseHeadersSchema,
     ResponseRulesConfigSchema,
     SubscriptionSettingsSchema,
 } from '../../models';
@@ -40,17 +41,7 @@ export namespace UpdateSubscriptionSettingsCommand {
         isShowCustomRemarks: z.optional(z.boolean()),
         customRemarks: z.optional(CustomRemarksSchema),
 
-        customResponseHeaders: z.optional(
-            z.record(
-                z
-                    .string()
-                    .regex(
-                        /^[a-zA-Z0-9_-]+$/,
-                        'Invalid header name. Only letters(a-z, A-Z), numbers(0-9), underscores(_) and hyphens(-) are allowed.',
-                    ),
-                z.string(),
-            ),
-        ),
+        customResponseHeaders: z.optional(HttpResponseHeadersSchema),
 
         randomizeHosts: z.optional(z.boolean()),
 

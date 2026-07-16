@@ -1,12 +1,17 @@
 import { Response } from 'express';
 
-import { Controller, Get, HttpStatus, Param, Res, UseFilters } from '@nestjs/common';
-import { ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, HttpStatus, Param, Res, UseFilters, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 import { Endpoint } from '@common/decorators/base-endpoint';
 import { GetSrrContext } from '@common/decorators/get-srr-context';
+import { Roles } from '@common/decorators/roles/roles';
+import { ApiScopeResource } from '@common/decorators/scopes';
 import { HttpExceptionFilter } from '@common/exception/http-exception.filter';
 import { PublicHttpExceptionFilter } from '@common/exception/public-http-exception.filter';
+import { JwtDefaultGuard } from '@common/guards/jwt-guards/def-jwt-guard';
+import { RolesGuard } from '@common/guards/roles';
+import { ScopesGuard } from '@common/guards/scopes';
 import { errorHandler } from '@common/helpers/error-handler.helper';
 import {
     CONTROLLERS_INFO,
@@ -14,7 +19,8 @@ import {
     SUBSCRIPTION_ROUTES,
 } from '@libs/contracts/api';
 import { GetSubscriptionInfoByShortUuidCommand } from '@libs/contracts/commands';
-import { REQUEST_TEMPLATE_TYPE } from '@libs/contracts/constants';
+import { REQUEST_TEMPLATE_TYPE, ROLE } from '@libs/contracts/constants';
+import { filterHttpResponseHeaders } from '@libs/contracts/models';
 
 import { ISRRContext } from '@modules/subscription-response-rules/interfaces';
 import { ResponseRulesEncryptionService } from '@modules/subscription-response-rules/services/response-rules-encryption.service';
@@ -32,6 +38,7 @@ import {
 } from '../models';
 import { SubscriptionService } from '../subscription.service';
 
+@ApiScopeResource(CONTROLLERS_INFO.SUBSCRIPTIONS.resource)
 @ApiTags(CONTROLLERS_INFO.SUBSCRIPTION.tag)
 @UseFilters(HttpExceptionFilter)
 @Controller(SUBSCRIPTION_CONTROLLER)
@@ -54,14 +61,17 @@ export class SubscriptionController {
             contentType = 'text/plain';
         }
 
-        response.set({
-            ...result.headers,
-            ...srrContext.headersToApply,
-        });
+        response.set(
+            filterHttpResponseHeaders({
+                ...result.headers,
+                ...srrContext.headersToApply,
+            }),
+        );
 
         return response.type(contentType).send(body);
     }
 
+    @ApiBearerAuth('Authorization')
     @ApiParam({
         name: 'shortUuid',
         type: String,
@@ -77,6 +87,8 @@ export class SubscriptionController {
         command: GetSubscriptionInfoByShortUuidCommand,
         httpCode: HttpStatus.OK,
     })
+    @Roles(ROLE.ADMIN, ROLE.API)
+    @UseGuards(JwtDefaultGuard, RolesGuard, ScopesGuard)
     async getSubscriptionInfoByShortUuid(
         @Param() { shortUuid }: GetSubscriptionInfoRequestDto,
     ): Promise<GetSubscriptionInfoResponseDto> {

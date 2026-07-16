@@ -93,14 +93,15 @@ export const sanitizeSvg = (source: string): string => {
     }
 
     const sanitized = DOMPurify.sanitize(source, {
-        USE_PROFILES: { svg: true, svgFilters: false },
         ALLOWED_TAGS: [...SVG_ALLOWED_TAGS],
         ALLOWED_ATTR: [...SVG_ALLOWED_ATTRIBUTES],
         FORBID_TAGS: ['script', 'foreignObject', 'iframe', 'object', 'embed', 'style', 'image'],
         FORBID_ATTR: ['style', 'href', 'xlink:href'],
         ALLOW_DATA_ATTR: false,
         ALLOW_ARIA_ATTR: true,
-    }).trim();
+    })
+        .replace(/\s+xmlns:xlink=(?:"[^"]*"|'[^']*')/giu, '')
+        .trim();
 
     if (!/^<svg(?:\s|>)/iu.test(sanitized)) {
         throw new Error('Sanitized value must have an SVG root element');

@@ -13,7 +13,7 @@ import { hasContent } from '@common/utils/convert-type';
 import { HwidHeaders } from '@common/utils/extract-hwid-headers';
 import { TemplateEngine } from '@common/utils/templates/replace-templates-values';
 import { ERRORS, EVENTS, TSubscriptionTemplateType, USERS_STATUS } from '@libs/contracts/constants';
-import { THwidSettings } from '@libs/contracts/models';
+import { isSafeHttpResponseHeader, THwidSettings } from '@libs/contracts/models';
 
 import { UserHwidDeviceEvent } from '@integration-modules/notifications/interfaces';
 
@@ -638,13 +638,16 @@ export class SubscriptionService {
 
         if (settings.customResponseHeaders) {
             for (const [key, value] of Object.entries(settings.customResponseHeaders)) {
-                headers[key] = TemplateEngine.formatWithUser(
+                const formattedValue = TemplateEngine.formatWithUser(
                     value,
                     user,
                     settings,
                     this.subPublicDomain,
                     true,
                 );
+                if (isSafeHttpResponseHeader(key, formattedValue)) {
+                    headers[key] = formattedValue;
+                }
             }
         }
 

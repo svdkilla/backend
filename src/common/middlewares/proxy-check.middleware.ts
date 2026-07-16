@@ -11,15 +11,14 @@ export function proxyCheckMiddleware(req: Request, res: Response, next: NextFunc
         return next();
     }
 
-    const isProxy = Boolean(req.headers['x-forwarded-for']);
-    const isHttps = Boolean(req.headers['x-forwarded-proto'] === 'https');
-
-    logger.debug(
-        `X-Forwarded-For: ${req.headers['x-forwarded-for']}, X-Forwarded-Proto: ${req.headers['x-forwarded-proto']}`,
-    );
+    const forwardedFor = req.headers['x-forwarded-for'];
+    const forwardedProto = req.headers['x-forwarded-proto'];
+    const isProxy =
+        typeof forwardedFor === 'string' && forwardedFor.length > 0 && forwardedFor.length <= 1_024;
+    const isHttps = req.secure && forwardedProto === 'https';
 
     if (!isHttps || !isProxy) {
-        res.socket?.destroy();
+        res.status(400).json({ statusCode: 400, message: 'Invalid proxy request' });
         logger.error('Reverse proxy and HTTPS are required.');
         return;
     }

@@ -55,7 +55,7 @@ services:
     container_name: remnawave-db
     hostname: remnawave-db
     shm_size: 512mb
-    <<: [*common, *logging, *env]
+    <<: [*common, *logging]
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
