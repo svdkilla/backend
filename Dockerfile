@@ -76,6 +76,7 @@ ENV PRISMA_HIDE_UPDATE_MESSAGE=true
 ENV PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
 
 ENV PM2_DISABLE_VERSION_CHECK=true
+ENV PM2_HOME=/tmp/pm2
 ENV NODE_OPTIONS="--max-old-space-size=16384"
 
 ENV __RW_METADATA_VERSION=${__RW_METADATA_VERSION}
@@ -85,20 +86,22 @@ ENV __RW_METADATA_GIT_BRANCH=${__RW_METADATA_GIT_BRANCH}
 ENV __RW_METADATA_BUILD_TIME=${__RW_METADATA_BUILD_TIME}
 ENV __RW_METADATA_BUILD_NUMBER=${__RW_METADATA_BUILD_NUMBER}
 
-COPY --from=backend-build /opt/app/dist ./dist
-COPY --from=frontend /opt/frontend/frontend_temp/dist ./frontend
-COPY --from=backend-build /opt/app/prisma ./prisma
-COPY --from=backend-build /opt/app/node_modules ./node_modules
+COPY --chown=node:node --from=backend-build /opt/app/dist ./dist
+COPY --chown=node:node --from=frontend /opt/frontend/frontend_temp/dist ./frontend
+COPY --chown=node:node --from=backend-build /opt/app/prisma ./prisma
+COPY --chown=node:node --from=backend-build /opt/app/node_modules ./node_modules
 
-COPY configs /var/lib/remnawave/configs
-COPY package*.json ./
-COPY prisma.config.ts ./prisma.config.ts
+COPY --chown=node:node configs /var/lib/remnawave/configs
+COPY --chown=node:node package*.json ./
+COPY --chown=node:node prisma.config.ts ./prisma.config.ts
 
-COPY ecosystem.config.js ./
-COPY docker-entrypoint.sh ./
+COPY --chown=node:node ecosystem.config.js ./
+COPY --chown=node:node docker-entrypoint.sh ./
 
 RUN npm install pm2 -g \
     && npm link
+
+USER node
 
 
 ENTRYPOINT [ "/bin/sh", "docker-entrypoint.sh" ]

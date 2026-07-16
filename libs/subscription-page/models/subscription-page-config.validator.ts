@@ -20,6 +20,7 @@ export const validateLocalizedTexts = (
         platforms: Record<string, unknown>;
         uiConfig: unknown;
         baseTranslations: unknown;
+        customLinks?: unknown;
     },
     requiredLocales: TSubscriptionPageLanguageCode[],
     ctx: z.RefinementCtx,
@@ -57,10 +58,15 @@ export const validateLocalizedTexts = (
 
     checkLocalizedText(data.platforms, 'platforms');
     checkLocalizedText(data.baseTranslations, 'baseTranslations');
+    checkLocalizedText(data.customLinks, 'customLinks');
 };
 
 export const validateSvgReferences = (
-    data: { svgLibrary: Record<string, string>; platforms: Record<string, unknown> },
+    data: {
+        svgLibrary: Record<string, string>;
+        platforms: Record<string, unknown>;
+        customLinks?: unknown;
+    },
     ctx: z.RefinementCtx,
 ): void => {
     const validKeys = new Set(Object.keys(data.svgLibrary));
@@ -86,6 +92,7 @@ export const validateSvgReferences = (
     };
 
     checkSvgRef(data.platforms, 'platforms');
+    checkSvgRef(data.customLinks, 'customLinks');
 };
 
 export const cleanLocalizedTexts = <T>(

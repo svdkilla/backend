@@ -216,6 +216,8 @@ export class SubscriptionPageConfigService {
                 }),
             );
 
+            await this.emitSubpageConfigChangedEvent(CRUD_ACTIONS.CREATED, newConfig.uuid);
+
             return ok(new BaseSubscriptionPageConfigResponseModel(newConfig));
         } catch (error) {
             this.logger.error(error);

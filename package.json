@@ -44,6 +44,7 @@
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "check": "oxfmt --check && oxlint",
+    "test:unit": "vitest run libs/subscription-page/tests --exclude dist/**",
     "fix": "oxfmt && oxlint --fix"
   },
   "dependencies": {
@@ -102,6 +103,7 @@
     "husky": "9.1.7",
     "hygen": "^6.2.11",
     "ioredis": "5.11.1",
+    "isomorphic-dompurify": "3.18.0",
     "jsonwebtoken": "^9.0.3",
     "kysely": "^0.28.11",
     "morgan": "^1.11.0",
@@ -162,9 +164,12 @@
     "prisma-json-types-generator": "3.6.2",
     "source-map-support": "^0.5.21",
     "typescript": "~5.9.3",
+    "vitest": "4.1.10",
     "zod-to-json-schema": "^3.25.0"
   },
   "overrides": {
+    "js-yaml": "4.3.0",
+    "lodash": "4.18.1",
     "multer": "2.2.0"
   }
 }

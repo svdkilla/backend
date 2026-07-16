@@ -6,12 +6,22 @@ import {
     SUBSCRIPTION_INFO_BLOCK_VARIANTS,
     INSTALLATION_GUIDE_BLOCKS_VARIANTS,
     BUTTON_TYPES,
+    CUSTOM_LINK_ACTIONS,
+    CUSTOM_LINK_MODES,
+    CUSTOM_LINK_SUBSCRIPTION_PROTOCOLS,
+    MAX_CUSTOM_LINKS,
     LANGUAGE_CODES,
 } from '../constants';
+import {
+    getCustomLinkTemplateError,
+    getCustomLinkUriError,
+    containsHtmlMarkup,
+} from './custom-link.validator';
 import {
     validateLocalizedTexts,
     validateSvgReferences,
 } from './subscription-page-config.validator';
+import { MAX_SVG_SOURCE_LENGTH, sanitizeSvg } from './svg-sanitizer';
 
 const LocalizedTextSchema = z
     .record(z.string().regex(/^[a-z]{2}$/, 'Language code must be 2 lowercase letters'), z.string())
@@ -20,9 +30,82 @@ const LocalizedTextSchema = z
     });
 
 const SvgLibrarySchema = z.record(
-    z.string().regex(/^[A-Za-z]+$/, { message: 'Only latin characters, no spaces allowed' }),
-    z.string(),
+    z.string().regex(/^[A-Za-z]+$/, {
+        message: 'Only latin characters, no spaces allowed',
+    }),
+    z
+        .string()
+        .max(MAX_SVG_SOURCE_LENGTH)
+        .transform((value, ctx) => {
+            try {
+                return sanitizeSvg(value);
+            } catch (error) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: error instanceof Error ? error.message : 'SVG is invalid',
+                });
+                return z.NEVER;
+            }
+        }),
 );
+
+const CustomLinkDisplayNameSchema = z
+    .record(
+        z.string().regex(/^[a-z]{2}$/, 'Language code must be 2 lowercase letters'),
+        z
+            .string()
+            .trim()
+            .min(1, 'Display name is required')
+            .max(100, 'Display name must be 100 characters or fewer')
+            .refine((value) => !containsHtmlMarkup(value), 'Display name must not contain HTML'),
+    )
+    .refine((obj) => Object.keys(obj).length > 0, {
+        message: 'At least one language must be specified',
+    });
+
+export const CustomLinkSchema = z
+    .object({
+        id: z
+            .string()
+            .min(1)
+            .max(64)
+            .regex(
+                /^[A-Za-z0-9_-]+$/,
+                'ID may only contain letters, numbers, underscores and dashes',
+            ),
+        enabled: z.boolean().default(true),
+        displayName: CustomLinkDisplayNameSchema,
+        uri: z.string().default(''),
+        action: z.enum(CUSTOM_LINK_ACTIONS),
+        iconKey: z.string().optional(),
+        order: z.number().int().min(0).max(10_000),
+        mode: z.enum(CUSTOM_LINK_MODES).default('literal'),
+        protocol: z.enum(CUSTOM_LINK_SUBSCRIPTION_PROTOCOLS).optional(),
+    })
+    .superRefine((value, ctx) => {
+        if (value.mode === 'subscriptionLinks') {
+            if (!value.protocol) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: 'Protocol is required when mode is subscriptionLinks',
+                    path: ['protocol'],
+                });
+            }
+            return;
+        }
+
+        const error =
+            value.mode === 'template'
+                ? getCustomLinkTemplateError(value.uri)
+                : getCustomLinkUriError(value.uri);
+        if (error) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: error,
+                path: ['uri'],
+            });
+        }
+    });
 
 const ButtonSchema = z.object({
     link: z.string(),
@@ -133,10 +216,23 @@ export const SubscriptionPageRawConfigSchema = z
         baseTranslations: SubscriptionPageTranslateKeysSchema,
         svgLibrary: SvgLibrarySchema,
         platforms: z.record(z.nativeEnum(SUBSCRIPTION_PAGE_CONFIG_PLATFORM_TYPES), PlatformSchema),
+        customLinks: z.array(CustomLinkSchema).max(MAX_CUSTOM_LINKS).default([]),
     })
     .superRefine((data, ctx) => {
         validateLocalizedTexts(data, data.locales, ctx);
         validateSvgReferences(data, ctx);
+
+        const ids = new Set<string>();
+        data.customLinks.forEach((link, index) => {
+            if (ids.has(link.id)) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: `Duplicate custom link ID '${link.id}'`,
+                    path: ['customLinks', index, 'id'],
+                });
+            }
+            ids.add(link.id);
+        });
     });
 
 export type TSubscriptionPageSvgLibrary = z.infer<typeof SvgLibrarySchema>;
@@ -151,3 +247,4 @@ export type TSubscriptionPageLocalizedText = z.infer<typeof LocalizedTextSchema>
 export type TSubscriptionPageUiConfig = z.infer<typeof UiConfigSchema>;
 export type TSubscriptionPageTranslateKeys = z.infer<typeof SubscriptionPageTranslateKeysSchema>;
 export type TSubscriptionPageBaseTranslationKeys = keyof TSubscriptionPageTranslateKeys;
+export type TSubscriptionPageCustomLink = z.infer<typeof CustomLinkSchema>;

@@ -9,13 +9,16 @@ import {
     ReorderSubscriptionPageConfigsCommand,
     CloneSubscriptionPageConfigCommand,
 } from '@libs/contracts/commands';
+import { SubscriptionPageRawConfigSchema } from '@libs/subscription-page/models';
 
 export class GetSubscriptionPageConfigsResponseDto extends createZodDto(
     GetSubscriptionPageConfigsCommand.ResponseSchema,
 ) {} // GET_ALL
 
 export class UpdateSubscriptionPageConfigRequestDto extends createZodDto(
-    UpdateSubscriptionPageConfigCommand.RequestSchema,
+    UpdateSubscriptionPageConfigCommand.RequestSchema.extend({
+        config: SubscriptionPageRawConfigSchema.optional(),
+    }),
 ) {} // UPDATE
 
 export class UpdateSubscriptionPageConfigResponseDto extends createZodDto(
