@@ -8,6 +8,7 @@ import type {
 
 import { ResolvedProxyConfig } from '../resolve-proxy/interfaces';
 import { SubscriptionTemplateService } from '../subscription-template.service';
+import { convertCustomVlessLinkToXrayJson } from './custom-vless-xray-json.converter';
 import {
     IGenerateConfigParams,
     Outbound,
@@ -194,6 +195,7 @@ export class XrayJsonGeneratorService {
     public async generateConfig(params: IGenerateConfigParams): Promise<string> {
         const {
             hosts,
+            additionalLinks = [],
             isExtendedClient,
             overrideTemplateName,
             ignoreHostXrayJsonTemplate = false,
@@ -236,6 +238,11 @@ export class XrayJsonGeneratorService {
                     remarks: outboundConfig.remarks,
                     meta: outboundConfig.meta,
                 });
+            }
+
+            for (const link of additionalLinks) {
+                const config = convertCustomVlessLinkToXrayJson(link, templateContent);
+                if (config) configs.push(config);
             }
 
             return JSON.stringify(configs, null, 0);

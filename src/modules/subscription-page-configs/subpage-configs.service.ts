@@ -59,7 +59,10 @@ export class SubscriptionPageConfigService {
         }
     }
 
-    public async getResolvedCustomSubscriptionLinks(uuid: string): Promise<string[]> {
+    public async getResolvedCustomSubscriptionLinks(
+        uuid: string,
+        activeInternalSquadUuids: readonly string[] = [],
+    ): Promise<string[]> {
         try {
             const entity = await this.subscriptionPageConfigRepository.findByUUID(uuid);
             if (!entity?.config) return [];
@@ -67,7 +70,10 @@ export class SubscriptionPageConfigService {
             const parsed = await SubscriptionPageRawConfigSchema.safeParseAsync(entity.config);
             if (!parsed.success) return [];
 
-            return resolveCustomSubscriptionLinks(parsed.data.customLinks);
+            return resolveCustomSubscriptionLinks(
+                parsed.data.customLinks,
+                activeInternalSquadUuids,
+            );
         } catch {
             this.logger.error('Failed to resolve custom subscription links.');
             return [];

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { assertSafeCertificateFileReferences } from '../../../src/common/helpers/xray-config/certificate-security';
 import { DEFAULT_SUBPAGE_CONFIG } from '../../../src/modules/subscription-page-configs/constants';
+import { convertCustomVlessLinkToXrayJson } from '../../../src/modules/subscription-template/generators/custom-vless-xray-json.converter';
+import { XrayGeneratorService } from '../../../src/modules/subscription-template/generators/xray.generator.service';
 import { HttpResponseHeadersSchema } from '../../contract/models/http-response-headers.schema';
 import { HttpOauthUrlSchema } from '../../contract/models/remnawave-settings/oauth2-settings.schema';
 import { isSafePublicHeaderRegex } from '../../contract/models/response-rules/safe-regex';
@@ -19,6 +21,7 @@ const baseLink = {
     displayName: { en: 'Documentation' },
     action: 'open' as const,
     order: 0,
+    internalSquadUuids: [],
 };
 
 describe('custom link URI validation', () => {
@@ -91,6 +94,24 @@ describe('custom link URI validation', () => {
         expect(parsed.customLinks[0]?.id).toBe('website');
     });
 
+    it('keeps a complete legacy connection URI and removes only its obsolete selector', () => {
+        const parsed = SubscriptionPageRawConfigSchema.parse({
+            ...DEFAULT_SUBPAGE_CONFIG,
+            customLinks: [
+                {
+                    ...baseLink,
+                    mode: 'subscriptionLinks',
+                    protocol: 'vless',
+                    uri: 'vless://test-marker@example.com:443#Legacy',
+                },
+            ],
+        });
+
+        expect(parsed.customLinks).toHaveLength(1);
+        expect(parsed.customLinks[0]?.uri).toBe('vless://test-marker@example.com:443#Legacy');
+        expect(parsed.customLinks[0]).not.toHaveProperty('protocol');
+    });
+
     it('adds only enabled VPN links to the main subscription list', () => {
         const links = resolveCustomSubscriptionLinks([
             {
@@ -107,6 +128,7 @@ describe('custom link URI validation', () => {
                 order: 1,
                 mode: 'subscriptionLinks',
                 uri: 'awg://opaque-payload#Custom-AWG',
+                internalSquadUuids: [],
             },
             {
                 ...baseLink,
@@ -129,6 +151,74 @@ describe('custom link URI validation', () => {
             'awg://opaque-payload#Custom-AWG',
             'vless://test@example.com:443#Custom',
         ]);
+    });
+
+    it('filters connection links by active internal squads', () => {
+        const squadA = '11111111-1111-4111-8111-111111111111';
+        const squadB = '22222222-2222-4222-8222-222222222222';
+        const links = [
+            {
+                ...baseLink,
+                id: 'everyone',
+                mode: 'subscriptionLinks' as const,
+                uri: 'vless://everyone@example.com:443#Everyone',
+            },
+            {
+                ...baseLink,
+                id: 'squad-a',
+                mode: 'subscriptionLinks' as const,
+                uri: 'vless://squad-a@example.com:443#A',
+                internalSquadUuids: [squadA],
+            },
+            {
+                ...baseLink,
+                id: 'squad-b',
+                mode: 'subscriptionLinks' as const,
+                uri: 'vless://squad-b@example.com:443#B',
+                internalSquadUuids: [squadB],
+            },
+        ];
+
+        expect(resolveCustomSubscriptionLinks(links, [squadA])).toEqual([
+            'vless://everyone@example.com:443#Everyone',
+            'vless://squad-a@example.com:443#A',
+        ]);
+        expect(resolveCustomSubscriptionLinks(links, [])).toEqual([
+            'vless://everyone@example.com:443#Everyone',
+        ]);
+    });
+
+    it('appends filtered connection URIs to text and base64 Xray subscriptions', async () => {
+        const generator = new XrayGeneratorService();
+        const marker = 'vless://test-marker@example.com:443#Additional';
+
+        expect(await generator.generateConfig([], false, false, [marker, marker])).toBe(marker);
+        expect(
+            Buffer.from(
+                await generator.generateConfig([], true, false, [marker]),
+                'base64',
+            ).toString('utf8'),
+        ).toBe(marker);
+    });
+
+    it('converts a custom VLESS URI into a valid Xray JSON subscription entry', async () => {
+        const parsed = convertCustomVlessLinkToXrayJson(
+            'vless://11111111-1111-4111-8111-111111111111@example.com:443?encryption=none&type=tcp&security=reality&sid=test-sid&sni=example.com&fp=chrome&flow=xtls-rprx-vision#Test-marker',
+            { remarks: 'template', outbounds: [] },
+        );
+
+        expect(parsed?.remarks).toBe('Test-marker');
+        expect(parsed?.outbounds[0]).toMatchObject({
+            protocol: 'vless',
+            settings: { vnext: [{ address: 'example.com', port: 443 }] },
+            streamSettings: { security: 'reality' },
+        });
+        expect(
+            convertCustomVlessLinkToXrayJson('myvpn+test://opaque-payload#Unsupported-by-Xray', {
+                remarks: 'template',
+                outbounds: [],
+            }),
+        ).toBeNull();
     });
 
     it('accepts a connection link without a display name or icon', () => {

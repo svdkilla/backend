@@ -78,6 +78,14 @@ export const CustomLinkSchema = z
         iconKey: z.string().optional(),
         order: z.number().int().min(0).max(10_000),
         mode: z.enum(CUSTOM_LINK_MODES).default('literal'),
+        internalSquadUuids: z
+            .array(z.string().uuid())
+            .max(1_000)
+            .refine((values) => new Set(values).size === values.length, {
+                message: 'Internal squad UUIDs must be unique',
+            })
+            .optional()
+            .default([]),
     })
     .superRefine((value, ctx) => {
         const error = getCustomLinkUriError(value.uri);
@@ -107,18 +115,36 @@ export const CustomLinkSchema = z
         }
     });
 
-const isRemovedLegacyCustomLink = (value: unknown): boolean => {
-    if (!value || typeof value !== 'object') return false;
+const normalizeLegacyCustomLink = (value: unknown): unknown | null => {
+    if (!value || typeof value !== 'object') return value;
     const link = value as Record<string, unknown>;
-    return (
-        link.mode === 'template' ||
-        (link.mode === 'subscriptionLinks' && typeof link.protocol === 'string')
-    );
+
+    if (link.mode === 'template') return null;
+
+    if (link.mode === 'subscriptionLinks' && typeof link.protocol === 'string') {
+        const normalizedLink = { ...link };
+        delete normalizedLink.protocol;
+        if (
+            typeof normalizedLink.uri === 'string' &&
+            !/^https?:/iu.test(normalizedLink.uri) &&
+            getCustomLinkUriError(normalizedLink.uri) === null
+        ) {
+            return normalizedLink;
+        }
+        return null;
+    }
+
+    return value;
 };
 
 const CustomLinksSchema = z.preprocess(
     (value) =>
-        Array.isArray(value) ? value.filter((link) => !isRemovedLegacyCustomLink(link)) : value,
+        Array.isArray(value)
+            ? value.flatMap((link) => {
+                  const normalizedLink = normalizeLegacyCustomLink(link);
+                  return normalizedLink === null ? [] : [normalizedLink];
+              })
+            : value,
     z.array(CustomLinkSchema).max(MAX_CUSTOM_LINKS),
 );
 

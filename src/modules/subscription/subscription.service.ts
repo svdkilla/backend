@@ -106,7 +106,7 @@ export class SubscriptionService {
                         shortUuid,
                     },
                     {
-                        activeInternalSquads: false,
+                        activeInternalSquads: true,
                     },
                 ),
             );
@@ -264,6 +264,7 @@ export class SubscriptionService {
                     ? _.shuffle(hosts.response)
                     : hosts.response,
                 hostsOverrides,
+                additionalXrayLinks: await this.getCustomSubscriptionLinks(user.response),
             });
 
             return new SubscriptionWithConfigResponse({
@@ -438,7 +439,7 @@ export class SubscriptionService {
                             [searchBy.uniqueFieldKey]: searchBy.uniqueField,
                         },
                         {
-                            activeInternalSquads: false,
+                            activeInternalSquads: true,
                         },
                     ),
                 );
@@ -554,6 +555,7 @@ export class SubscriptionService {
 
         return this.subscriptionPageConfigService.getResolvedCustomSubscriptionLinks(
             configUuidResult.response ?? SUBPAGE_DEFAULT_CONFIG_UUID,
+            user.activeInternalSquads.map((squad) => squad.uuid),
         );
     }
 

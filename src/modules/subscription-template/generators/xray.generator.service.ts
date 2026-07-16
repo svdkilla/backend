@@ -32,9 +32,17 @@ export class XrayGeneratorService {
         hosts: ResolvedProxyConfig[],
         isBase64: boolean,
         isHapp: boolean,
+        additionalLinks: readonly string[] = [],
     ): Promise<string> {
         try {
             const links = this.generateLinks(hosts, isHapp);
+            const seen = new Set(links);
+            for (const link of additionalLinks) {
+                if (!seen.has(link)) {
+                    links.push(link);
+                    seen.add(link);
+                }
+            }
             const joined = links.join('\n');
             return isBase64 ? Buffer.from(joined).toString('base64') : joined;
         } catch (error) {

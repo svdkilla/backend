@@ -28,7 +28,8 @@ export class RenderTemplatesService {
         contentType: string;
         subscription: string;
     }> {
-        const { srrContext, user, hosts, hostsOverrides, fallbackOptions } = params;
+        const { srrContext, user, hosts, hostsOverrides, fallbackOptions, additionalXrayLinks } =
+            params;
 
         const formattedHosts = await this.resolveProxyConfigService.resolveProxyConfig({
             subscriptionSettings: srrContext.subscriptionSettings,
@@ -46,6 +47,7 @@ export class RenderTemplatesService {
                         formattedHosts,
                         SUBSCRIPTION_CONFIG_TYPES['XRAY_BASE64'].isBase64,
                         srrContext.isExtendedClient,
+                        additionalXrayLinks,
                     ),
                     contentType: SUBSCRIPTION_CONFIG_TYPES['XRAY_BASE64'].CONTENT_TYPE,
                 };
@@ -94,6 +96,7 @@ export class RenderTemplatesService {
                 return {
                     subscription: await this.xrayJsonGeneratorService.generateConfig({
                         hosts: formattedHosts,
+                        additionalLinks: additionalXrayLinks,
                         isExtendedClient: srrContext.isExtendedClient,
                         overrideTemplateName: srrContext.overrideTemplateName,
                         ignoreHostXrayJsonTemplate: srrContext.ignoreHostXrayJsonTemplate,
