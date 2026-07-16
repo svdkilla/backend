@@ -4,20 +4,16 @@ export type TCustomLinkAction = (typeof CUSTOM_LINK_ACTIONS)[number];
 export const CUSTOM_LINK_MODES = ['literal', 'template', 'subscriptionLinks'] as const;
 export type TCustomLinkMode = (typeof CUSTOM_LINK_MODES)[number];
 
-export const ALLOWED_CUSTOM_LINK_SCHEMES = [
-    'https',
-    'http',
-    'vless',
-    'vmess',
-    'trojan',
-    'ss',
-    'hysteria2',
-    'hy2',
-    'tuic',
-    'wireguard',
-    'sub',
+export const BLOCKED_CUSTOM_LINK_SCHEMES = [
+    'about',
+    'blob',
+    'data',
+    'file',
+    'filesystem',
+    'javascript',
+    'vbscript',
+    'view-source',
 ] as const;
-export type TAllowedCustomLinkScheme = (typeof ALLOWED_CUSTOM_LINK_SCHEMES)[number];
 
 export const CUSTOM_LINK_SUBSCRIPTION_PROTOCOLS = [
     'vless',

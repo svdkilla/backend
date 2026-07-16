@@ -58,7 +58,6 @@ export const validateLocalizedTexts = (
 
     checkLocalizedText(data.platforms, 'platforms');
     checkLocalizedText(data.baseTranslations, 'baseTranslations');
-    checkLocalizedText(data.customLinks, 'customLinks');
 };
 
 export const validateSvgReferences = (

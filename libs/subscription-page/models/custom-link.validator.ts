@@ -1,8 +1,7 @@
 import {
-    ALLOWED_CUSTOM_LINK_SCHEMES,
+    BLOCKED_CUSTOM_LINK_SCHEMES,
     CUSTOM_LINK_TEMPLATE_VARIABLES,
     MAX_CUSTOM_LINK_URI_LENGTH,
-    TAllowedCustomLinkScheme,
 } from '../constants';
 
 const HTML_DELIMITERS = /[<>]/u;
@@ -16,7 +15,7 @@ const SCHEME_PATTERN = /^([A-Za-z][A-Za-z0-9+.-]*):/u;
 const PERCENT_ESCAPE_PATTERN = /%[0-9A-Fa-f]{2}/u;
 const TEMPLATE_PATTERN = /\{\{\s*([^{}]+?)\s*\}\}/gu;
 
-const allowedSchemes = new Set<string>(ALLOWED_CUSTOM_LINK_SCHEMES);
+const blockedSchemes = new Set<string>(BLOCKED_CUSTOM_LINK_SCHEMES);
 const allowedTemplateVariables = new Set<string>(CUSTOM_LINK_TEMPLATE_VARIABLES);
 
 const getDecodedVariants = (value: string): string[] | null => {
@@ -64,8 +63,8 @@ export const getCustomLinkUriError = (rawValue: string): string | null => {
     const schemeMatch = SCHEME_PATTERN.exec(rawValue);
     if (!schemeMatch) return 'URI must start with an explicit allowed scheme';
 
-    const scheme = schemeMatch[1]!.toLowerCase() as TAllowedCustomLinkScheme;
-    if (!allowedSchemes.has(scheme)) return `URI scheme '${scheme}' is not allowed`;
+    const scheme = schemeMatch[1]!.toLowerCase();
+    if (blockedSchemes.has(scheme)) return `URI scheme '${scheme}' is not allowed`;
 
     if (scheme === 'http' || scheme === 'https') {
         try {

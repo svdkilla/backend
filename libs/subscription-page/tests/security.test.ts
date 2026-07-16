@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { assertSafeCertificateFileReferences } from '../../../src/common/helpers/xray-config/certificate-security';
+import { DEFAULT_SUBPAGE_CONFIG } from '../../../src/modules/subscription-page-configs/constants';
 import { HttpResponseHeadersSchema } from '../../contract/models/http-response-headers.schema';
 import { HttpOauthUrlSchema } from '../../contract/models/remnawave-settings/oauth2-settings.schema';
 import { isSafePublicHeaderRegex } from '../../contract/models/response-rules/safe-regex';
@@ -9,6 +10,7 @@ import { getCustomLinkUriError } from '../models/custom-link.validator';
 import { resolveCustomSubscriptionLinks } from '../models/custom-subscription-links.resolver';
 import { sanitizeLocalizedHtml } from '../models/localized-html-sanitizer';
 import { CustomLinkSchema } from '../models/subscription-page-config.schema';
+import { SubscriptionPageRawConfigSchema } from '../models/subscription-page-config.schema';
 import { sanitizeSvg } from '../models/svg-sanitizer';
 
 const baseLink = {
@@ -26,6 +28,9 @@ describe('custom link URI validation', () => {
         'vless://user@example.com:443?security=tls#Example',
         'hysteria2://secret@example.com:443',
         'hy2://secret@example.com:443',
+        'wg://opaque-custom-payload#WireGuard',
+        'awg://opaque-custom-payload#AmneziaWG',
+        'myvpn+test://anything-the-client-understands#Custom',
         'wireguard://example',
     ])('accepts an allowed URI: %s', (uri) => {
         expect(getCustomLinkUriError(uri)).toBeNull();
@@ -73,10 +78,19 @@ describe('custom link URI validation', () => {
                     uri: 'https://example.com/help',
                 },
                 {
+                    id: 'custom-server-without-ui-metadata',
+                    enabled: true,
+                    displayName: {},
+                    action: 'copy',
+                    order: 1,
+                    mode: 'literal',
+                    uri: 'awg://opaque-payload#Custom-AWG',
+                },
+                {
                     ...baseLink,
                     id: 'custom-server',
                     mode: 'template',
-                    order: 1,
+                    order: 2,
                     uri: 'vless://test@example.com:443?user={{username}}#Custom',
                 },
                 {
@@ -84,14 +98,14 @@ describe('custom link URI validation', () => {
                     enabled: false,
                     id: 'disabled-server',
                     mode: 'literal',
-                    order: 2,
+                    order: 3,
                     uri: 'hy2://disabled@example.com:443',
                 },
                 {
                     ...baseLink,
                     id: 'existing-server-selector',
                     mode: 'subscriptionLinks',
-                    order: 3,
+                    order: 4,
                     protocol: 'vless',
                     uri: '',
                 },
@@ -103,7 +117,39 @@ describe('custom link URI validation', () => {
             },
         );
 
-        expect(links).toEqual(['vless://test@example.com:443?user=test-user#Custom']);
+        expect(links).toEqual([
+            'awg://opaque-payload#Custom-AWG',
+            'vless://test@example.com:443?user=test-user#Custom',
+        ]);
+    });
+
+    it('accepts a connection link without a display name or icon', () => {
+        expect(
+            CustomLinkSchema.safeParse({
+                id: 'connection-only',
+                enabled: true,
+                uri: 'wg://opaque-payload#Name-from-fragment',
+                order: 0,
+                mode: 'literal',
+            }).success,
+        ).toBe(true);
+    });
+
+    it('accepts a metadata-free connection link in a complete page config', () => {
+        const config = {
+            ...DEFAULT_SUBPAGE_CONFIG,
+            customLinks: [
+                {
+                    id: 'connection-only',
+                    enabled: true,
+                    uri: 'awg://opaque-payload#Name-from-fragment',
+                    order: 0,
+                    mode: 'literal',
+                },
+            ],
+        };
+
+        expect(SubscriptionPageRawConfigSchema.safeParse(config).success).toBe(true);
     });
 
     it('drops a resolved template if user data makes the URI unsafe', () => {

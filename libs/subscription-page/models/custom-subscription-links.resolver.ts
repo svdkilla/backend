@@ -1,10 +1,8 @@
-import { CUSTOM_LINK_SUBSCRIPTION_PROTOCOLS } from '../constants';
 import { getCustomLinkUriError } from './custom-link.validator';
 import { TSubscriptionPageCustomLink } from './subscription-page-config.schema';
 
 const SCHEME_PATTERN = /^([A-Za-z][A-Za-z0-9+.-]*):/u;
 const TEMPLATE_PATTERN = /\{\{\s*(username|shortUuid|subscriptionUrl)\s*\}\}/gu;
-const subscriptionSchemes = new Set<string>(CUSTOM_LINK_SUBSCRIPTION_PROTOCOLS);
 
 export interface CustomSubscriptionLinkTemplateValues {
     shortUuid: string;
@@ -33,7 +31,8 @@ export const resolveCustomSubscriptionLinks = (
 
             if (
                 !scheme ||
-                !subscriptionSchemes.has(scheme) ||
+                scheme === 'http' ||
+                scheme === 'https' ||
                 getCustomLinkUriError(uri) !== null ||
                 seen.has(uri)
             ) {

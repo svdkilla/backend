@@ -54,19 +54,18 @@ const SvgLibrarySchema = z.record(
         }),
 );
 
-const CustomLinkDisplayNameSchema = z
-    .record(
-        z.string().regex(/^[a-z]{2}$/, 'Language code must be 2 lowercase letters'),
-        z
-            .string()
-            .trim()
-            .min(1, 'Display name is required')
-            .max(100, 'Display name must be 100 characters or fewer')
-            .refine((value) => !containsHtmlMarkup(value), 'Display name must not contain HTML'),
-    )
-    .refine((obj) => Object.keys(obj).length > 0, {
-        message: 'At least one language must be specified',
-    });
+const CustomLinkDisplayNameSchema = z.record(
+    z.string().regex(/^[a-z]{2}$/, 'Language code must be 2 lowercase letters'),
+    z
+        .string()
+        .trim()
+        .min(1, 'Display name is required')
+        .max(100, 'Display name must be 100 characters or fewer')
+        .refine((value) => !containsHtmlMarkup(value), 'Display name must not contain HTML'),
+);
+
+const isHeaderCustomLink = (link: { mode: string; uri: string }): boolean =>
+    link.mode !== 'subscriptionLinks' && /^https?:/iu.test(link.uri);
 
 export const CustomLinkSchema = z
     .object({
@@ -79,9 +78,9 @@ export const CustomLinkSchema = z
                 'ID may only contain letters, numbers, underscores and dashes',
             ),
         enabled: z.boolean().default(true),
-        displayName: CustomLinkDisplayNameSchema,
+        displayName: CustomLinkDisplayNameSchema.optional().default({}),
         uri: z.string().default(''),
-        action: z.enum(CUSTOM_LINK_ACTIONS),
+        action: z.enum(CUSTOM_LINK_ACTIONS).default('copy'),
         iconKey: z.string().optional(),
         order: z.number().int().min(0).max(10_000),
         mode: z.enum(CUSTOM_LINK_MODES).default('literal'),
@@ -248,6 +247,26 @@ export const SubscriptionPageRawConfigSchema = z
                 });
             }
             ids.add(link.id);
+
+            if (isHeaderCustomLink(link)) {
+                for (const locale of data.locales) {
+                    if (!link.displayName[locale]) {
+                        ctx.addIssue({
+                            code: z.ZodIssueCode.custom,
+                            message: `Missing required locale '${locale}'`,
+                            path: ['customLinks', index, 'displayName', locale],
+                        });
+                    }
+                }
+            }
+
+            if (link.iconKey && !Object.hasOwn(data.svgLibrary, link.iconKey)) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: 'Unknown icon key',
+                    path: ['customLinks', index, 'iconKey'],
+                });
+            }
         });
     });
 
