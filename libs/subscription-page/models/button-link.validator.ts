@@ -9,6 +9,7 @@ const SUBSCRIPTION_APP_SCHEMES = new Set([
     'flclashx',
     'happ',
     'hiddify',
+    'incy',
     'koala-clash',
     'prizrak-box',
     'shadowrocket',

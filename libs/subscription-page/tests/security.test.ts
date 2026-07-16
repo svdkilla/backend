@@ -168,6 +168,7 @@ describe('localized HTML and button URI hardening', () => {
     it.each([
         ['https://example.com/download', 'external'],
         ['happ://add/{{SUBSCRIPTION_LINK}}', 'subscriptionLink'],
+        ['incy://install?url={{SUBSCRIPTION_LINK}}', 'subscriptionLink'],
         ['stash://install-config?url={{SUBSCRIPTION_LINK}}', 'copyButton'],
     ] as const)('accepts safe button link %s', (link, type) => {
         expect(getButtonLinkError(link, type)).toBeNull();
