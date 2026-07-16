@@ -112,6 +112,10 @@ COPY --chown=node:node prisma.config.ts ./prisma.config.ts
 COPY --chown=node:node ecosystem.config.js ./
 COPY --chown=node:node docker-entrypoint.sh ./
 
+# Keep shell entrypoints portable when the build context comes from Windows.
+RUN sed -i 's/\r$//' docker-entrypoint.sh \
+    && sh -n docker-entrypoint.sh
+
 RUN npm install --global pm2@7.0.3 \
     && npm cache clean --force \
     && npm link
