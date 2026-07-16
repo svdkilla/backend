@@ -50,76 +50,53 @@ describe('custom link URI validation', () => {
         expect(error).not.toContain(uri);
     });
 
-    it('allows only the explicit template variables', () => {
+    it('does not accept the removed personalized-template mode', () => {
         expect(
             CustomLinkSchema.safeParse({
                 ...baseLink,
                 mode: 'template',
                 uri: 'https://example.com/u/{{username}}?id={{shortUuid}}',
             }).success,
-        ).toBe(true);
-
-        expect(
-            CustomLinkSchema.safeParse({
-                ...baseLink,
-                mode: 'template',
-                uri: 'https://example.com/{{constructor}}',
-            }).success,
         ).toBe(false);
     });
 
     it('adds only enabled VPN links to the main subscription list', () => {
-        const links = resolveCustomSubscriptionLinks(
-            [
-                {
-                    ...baseLink,
-                    id: 'website',
-                    mode: 'literal',
-                    uri: 'https://example.com/help',
-                },
-                {
-                    id: 'custom-server-without-ui-metadata',
-                    enabled: true,
-                    displayName: {},
-                    action: 'copy',
-                    order: 1,
-                    mode: 'literal',
-                    uri: 'awg://opaque-payload#Custom-AWG',
-                },
-                {
-                    ...baseLink,
-                    id: 'custom-server',
-                    mode: 'template',
-                    order: 2,
-                    uri: 'vless://test@example.com:443?user={{username}}#Custom',
-                },
-                {
-                    ...baseLink,
-                    enabled: false,
-                    id: 'disabled-server',
-                    mode: 'literal',
-                    order: 3,
-                    uri: 'hy2://disabled@example.com:443',
-                },
-                {
-                    ...baseLink,
-                    id: 'existing-server-selector',
-                    mode: 'subscriptionLinks',
-                    order: 4,
-                    protocol: 'vless',
-                    uri: '',
-                },
-            ],
+        const links = resolveCustomSubscriptionLinks([
             {
-                shortUuid: 'test-short-id',
-                subscriptionUrl: 'https://subscription.invalid/test-short-id',
-                username: 'test-user',
+                ...baseLink,
+                id: 'website',
+                mode: 'literal',
+                uri: 'https://example.com/help',
             },
-        );
+            {
+                id: 'custom-server-without-ui-metadata',
+                enabled: true,
+                displayName: {},
+                action: 'copy',
+                order: 1,
+                mode: 'subscriptionLinks',
+                uri: 'awg://opaque-payload#Custom-AWG',
+            },
+            {
+                ...baseLink,
+                id: 'custom-server',
+                mode: 'subscriptionLinks',
+                order: 2,
+                uri: 'vless://test@example.com:443#Custom',
+            },
+            {
+                ...baseLink,
+                enabled: false,
+                id: 'disabled-server',
+                mode: 'subscriptionLinks',
+                order: 3,
+                uri: 'hy2://disabled@example.com:443',
+            },
+        ]);
 
         expect(links).toEqual([
             'awg://opaque-payload#Custom-AWG',
-            'vless://test@example.com:443?user=test-user#Custom',
+            'vless://test@example.com:443#Custom',
         ]);
     });
 
@@ -130,7 +107,7 @@ describe('custom link URI validation', () => {
                 enabled: true,
                 uri: 'wg://opaque-payload#Name-from-fragment',
                 order: 0,
-                mode: 'literal',
+                mode: 'subscriptionLinks',
             }).success,
         ).toBe(true);
     });
@@ -144,7 +121,7 @@ describe('custom link URI validation', () => {
                     enabled: true,
                     uri: 'awg://opaque-payload#Name-from-fragment',
                     order: 0,
-                    mode: 'literal',
+                    mode: 'subscriptionLinks',
                 },
             ],
         };
@@ -152,24 +129,21 @@ describe('custom link URI validation', () => {
         expect(SubscriptionPageRawConfigSchema.safeParse(config).success).toBe(true);
     });
 
-    it('drops a resolved template if user data makes the URI unsafe', () => {
+    it('keeps header links and connection links in separate destinations', () => {
         expect(
-            resolveCustomSubscriptionLinks(
-                [
-                    {
-                        ...baseLink,
-                        id: 'unsafe-after-resolution',
-                        mode: 'template',
-                        uri: 'vless://test@example.com:443#{{username}}',
-                    },
-                ],
-                {
-                    shortUuid: 'test-short-id',
-                    subscriptionUrl: 'https://subscription.invalid/test-short-id',
-                    username: 'test\r\nInjected',
-                },
-            ),
-        ).toEqual([]);
+            CustomLinkSchema.safeParse({
+                ...baseLink,
+                mode: 'literal',
+                uri: 'vless://test@example.com:443#Wrong-destination',
+            }).success,
+        ).toBe(false);
+        expect(
+            CustomLinkSchema.safeParse({
+                ...baseLink,
+                mode: 'subscriptionLinks',
+                uri: 'https://example.com/wrong-destination',
+            }).success,
+        ).toBe(false);
     });
 });
 

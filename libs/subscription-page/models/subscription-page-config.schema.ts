@@ -8,16 +8,11 @@ import {
     BUTTON_TYPES,
     CUSTOM_LINK_ACTIONS,
     CUSTOM_LINK_MODES,
-    CUSTOM_LINK_SUBSCRIPTION_PROTOCOLS,
     MAX_CUSTOM_LINKS,
     LANGUAGE_CODES,
 } from '../constants';
 import { getButtonLinkError, getHttpUrlError } from './button-link.validator';
-import {
-    getCustomLinkTemplateError,
-    getCustomLinkUriError,
-    containsHtmlMarkup,
-} from './custom-link.validator';
+import { getCustomLinkUriError, containsHtmlMarkup } from './custom-link.validator';
 import { MAX_LOCALIZED_HTML_LENGTH, sanitizeLocalizedHtml } from './localized-html-sanitizer';
 import {
     validateLocalizedTexts,
@@ -64,8 +59,7 @@ const CustomLinkDisplayNameSchema = z.record(
         .refine((value) => !containsHtmlMarkup(value), 'Display name must not contain HTML'),
 );
 
-const isHeaderCustomLink = (link: { mode: string; uri: string }): boolean =>
-    link.mode !== 'subscriptionLinks' && /^https?:/iu.test(link.uri);
+const isHeaderCustomLink = (link: { mode: string }): boolean => link.mode === 'literal';
 
 export const CustomLinkSchema = z
     .object({
@@ -84,28 +78,30 @@ export const CustomLinkSchema = z
         iconKey: z.string().optional(),
         order: z.number().int().min(0).max(10_000),
         mode: z.enum(CUSTOM_LINK_MODES).default('literal'),
-        protocol: z.enum(CUSTOM_LINK_SUBSCRIPTION_PROTOCOLS).optional(),
     })
     .superRefine((value, ctx) => {
-        if (value.mode === 'subscriptionLinks') {
-            if (!value.protocol) {
-                ctx.addIssue({
-                    code: z.ZodIssueCode.custom,
-                    message: 'Protocol is required when mode is subscriptionLinks',
-                    path: ['protocol'],
-                });
-            }
-            return;
-        }
-
-        const error =
-            value.mode === 'template'
-                ? getCustomLinkTemplateError(value.uri)
-                : getCustomLinkUriError(value.uri);
+        const error = getCustomLinkUriError(value.uri);
         if (error) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
                 message: error,
+                path: ['uri'],
+            });
+            return;
+        }
+
+        const usesHttp = /^https?:/iu.test(value.uri);
+        if (value.mode === 'literal' && !usesHttp) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'Header link must use HTTP(S)',
+                path: ['uri'],
+            });
+        }
+        if (value.mode === 'subscriptionLinks' && usesHttp) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'Connection link must use a non-HTTP URI scheme',
                 path: ['uri'],
             });
         }

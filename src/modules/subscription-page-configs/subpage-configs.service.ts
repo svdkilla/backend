@@ -8,7 +8,6 @@ import { fail, ok, TResult } from '@common/types';
 import { CRUD_ACTIONS, ERRORS, EVENTS, TCrudActions } from '@libs/contracts/constants';
 import { SUBPAGE_DEFAULT_CONFIG_UUID } from '@libs/subscription-page/constants';
 import {
-    CustomSubscriptionLinkTemplateValues,
     resolveCustomSubscriptionLinks,
     SubscriptionPageRawConfigSchema,
 } from '@libs/subscription-page/models';
@@ -60,10 +59,7 @@ export class SubscriptionPageConfigService {
         }
     }
 
-    public async getResolvedCustomSubscriptionLinks(
-        uuid: string,
-        values: CustomSubscriptionLinkTemplateValues,
-    ): Promise<string[]> {
+    public async getResolvedCustomSubscriptionLinks(uuid: string): Promise<string[]> {
         try {
             const entity = await this.subscriptionPageConfigRepository.findByUUID(uuid);
             if (!entity?.config) return [];
@@ -71,7 +67,7 @@ export class SubscriptionPageConfigService {
             const parsed = await SubscriptionPageRawConfigSchema.safeParseAsync(entity.config);
             if (!parsed.success) return [];
 
-            return resolveCustomSubscriptionLinks(parsed.data.customLinks, values);
+            return resolveCustomSubscriptionLinks(parsed.data.customLinks);
         } catch {
             this.logger.error('Failed to resolve custom subscription links.');
             return [];

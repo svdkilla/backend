@@ -554,11 +554,6 @@ export class SubscriptionService {
 
         return this.subscriptionPageConfigService.getResolvedCustomSubscriptionLinks(
             configUuidResult.response ?? SUBPAGE_DEFAULT_CONFIG_UUID,
-            {
-                shortUuid: user.shortUuid,
-                subscriptionUrl: this.resolveSubscriptionUrl(user.shortUuid),
-                username: user.username,
-            },
         );
     }
 

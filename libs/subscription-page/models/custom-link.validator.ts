@@ -1,8 +1,4 @@
-import {
-    BLOCKED_CUSTOM_LINK_SCHEMES,
-    CUSTOM_LINK_TEMPLATE_VARIABLES,
-    MAX_CUSTOM_LINK_URI_LENGTH,
-} from '../constants';
+import { BLOCKED_CUSTOM_LINK_SCHEMES, MAX_CUSTOM_LINK_URI_LENGTH } from '../constants';
 
 const HTML_DELIMITERS = /[<>]/u;
 
@@ -13,10 +9,8 @@ const hasControlCharacters = (value: string): boolean =>
     });
 const SCHEME_PATTERN = /^([A-Za-z][A-Za-z0-9+.-]*):/u;
 const PERCENT_ESCAPE_PATTERN = /%[0-9A-Fa-f]{2}/u;
-const TEMPLATE_PATTERN = /\{\{\s*([^{}]+?)\s*\}\}/gu;
 
 const blockedSchemes = new Set<string>(BLOCKED_CUSTOM_LINK_SCHEMES);
-const allowedTemplateVariables = new Set<string>(CUSTOM_LINK_TEMPLATE_VARIABLES);
 
 const getDecodedVariants = (value: string): string[] | null => {
     const variants = [value];
@@ -83,29 +77,6 @@ export const getCustomLinkUriError = (rawValue: string): string | null => {
     }
 
     return null;
-};
-
-export const getCustomLinkTemplateError = (template: string): string | null => {
-    const variables = [...template.matchAll(TEMPLATE_PATTERN)];
-
-    for (const match of variables) {
-        const key = match[1]!;
-        if (!allowedTemplateVariables.has(key)) {
-            return `Template variable '{{${key}}}' is not allowed`;
-        }
-    }
-
-    const withoutKnownVariables = template.replace(TEMPLATE_PATTERN, 'template-value');
-    if (withoutKnownVariables.includes('{{') || withoutKnownVariables.includes('}}')) {
-        return 'Template contains malformed variable syntax';
-    }
-
-    const validationValue = template
-        .replace(/\{\{username\}\}/gu, 'example-user')
-        .replace(/\{\{shortUuid\}\}/gu, '01234567')
-        .replace(/\{\{subscriptionUrl\}\}/gu, 'https://subscription.invalid/example');
-
-    return getCustomLinkUriError(validationValue);
 };
 
 export const containsHtmlMarkup = (value: string): boolean => HTML_DELIMITERS.test(value);
