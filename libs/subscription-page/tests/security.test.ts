@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { assertInlineCertificatesOnly } from '../../../src/common/helpers/xray-config/certificate-security';
+import { assertSafeCertificateFileReferences } from '../../../src/common/helpers/xray-config/certificate-security';
 import { HttpResponseHeadersSchema } from '../../contract/models/http-response-headers.schema';
 import { HttpOauthUrlSchema } from '../../contract/models/remnawave-settings/oauth2-settings.schema';
 import { isSafePublicHeaderRegex } from '../../contract/models/response-rules/safe-regex';
@@ -162,18 +162,33 @@ describe('API-supplied Xray config filesystem isolation', () => {
         { certificateFile: '/proc/self/environ' },
         { keyFile: 'C:\\Windows\\win.ini' },
         { certificateFile: '../../.env' },
-    ])('rejects certificate file reference without reading it: %j', (certificate) => {
-        expect(() => assertInlineCertificatesOnly([certificate])).toThrow(
-            /certificateFile and keyFile are not allowed/u,
+        { certificateFile: '/etc/xray/cert.pem/../secret.pem' },
+        { keyFile: '/etc/xray/private.key\nTEST' },
+    ])('rejects an unsafe certificate file reference without reading it: %j', (certificate) => {
+        expect(() => assertSafeCertificateFileReferences([certificate])).toThrow(
+            /normalized absolute POSIX paths/u,
         );
     });
 
-    it('accepts inline certificate material', () => {
+    it('accepts inline material and normalized node-side certificate paths', () => {
         expect(() =>
-            assertInlineCertificatesOnly([
+            assertSafeCertificateFileReferences([
                 { certificate: ['TEST-CERTIFICATE-MARKER'], key: ['TEST-KEY-MARKER'] },
+                {
+                    certificateFile: '/etc/xray/tls/certificate.pem',
+                    keyFile: '/etc/xray/tls/private.key',
+                },
             ]),
         ).not.toThrow();
+    });
+
+    it('validates node-side references without modifying them', () => {
+        const certificateFile = '/etc/xray/tls/TEST-CERTIFICATE.pem';
+        const keyFile = '/etc/xray/tls/TEST-PRIVATE.key';
+        const certificates = [{ certificateFile, keyFile }];
+
+        expect(() => assertSafeCertificateFileReferences(certificates)).not.toThrow();
+        expect(certificates).toEqual([{ certificateFile, keyFile }]);
     });
 });
 

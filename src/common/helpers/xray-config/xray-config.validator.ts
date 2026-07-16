@@ -16,7 +16,7 @@ import { getVlessFlow } from '@common/utils/flow/get-vless-flow';
 
 import { UserForConfigEntity } from '@modules/users/entities/users-for-config';
 
-import { assertInlineCertificatesOnly } from './certificate-security';
+import { assertSafeCertificateFileReferences } from './certificate-security';
 import { getSsPassword, isSS2022MethodFromMethod, SHADOWSOCKS_METHODS } from './ss-cipher';
 
 const MANAGED_CLIENT_PROTOCOLS = new Set(['hysteria', 'shadowsocks', 'trojan', 'vless']);
@@ -110,7 +110,7 @@ export class XRayConfig {
     }
 
     public processCertificates(): XrayConfig {
-        // Certificate material must be inline. File references are rejected in validate()
+        // File references belong to the target node. The Panel must never read them,
         // because config profiles can be supplied through the HTTP API.
         return this.config;
     }
@@ -354,7 +354,7 @@ export class XRayConfig {
         const certificates = inbound.streamSettings?.tlsSettings?.certificates;
         if (!certificates) return;
 
-        assertInlineCertificatesOnly(certificates);
+        assertSafeCertificateFileReferences(certificates);
     }
 
     private validateNetwork(inbound: InboundConfig): void {

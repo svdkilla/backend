@@ -10,6 +10,6 @@ Localized guide fields allow basic text formatting such as `strong`, `em`, lists
 
 Extended subscription information at `/api/sub/:shortUuid/info` requires a panel JWT or API token with `subscriptions:get`. The raw subscription routes remain public by design because the short UUID is the bearer credential. A subscription-page token should contain only `system:metadata`, `subscription-page-configs:list`, `subscription-page-configs:get`, `subscriptions:subpage-config`, and `subscriptions:get`. Add `users:by-username` only for Marzban legacy links.
 
-Xray profiles cannot refer to `certificateFile` or `keyFile`. An API-supplied path could otherwise read a panel file while the profile is being validated. Certificates and keys must be provided as inline arrays. Existing profiles that still use file references need a one-time migration before this build is deployed.
+Xray profiles may keep `certificateFile` and `keyFile` references for files that exist on a target node. Paths must be normalized absolute POSIX paths with a certificate or key extension. The Panel passes these values through and never reads the referenced files. Inline certificate arrays remain supported.
 
 The Panel image pins the frontend release and verifies the SHA-256 of the frontend archive and all validator assets before unpacking them. When one of those upstream files changes, update its version or checksum only after reviewing the release. The Cloudflare compose variants also pin `cloudflared` by version and multi-architecture manifest digest.
