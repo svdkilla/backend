@@ -60,6 +60,37 @@ describe('custom link URI validation', () => {
         ).toBe(false);
     });
 
+    it('drops removed legacy selectors without rejecting the remaining page config', () => {
+        const parsed = SubscriptionPageRawConfigSchema.parse({
+            ...DEFAULT_SUBPAGE_CONFIG,
+            customLinks: [
+                {
+                    ...baseLink,
+                    mode: 'subscriptionLinks',
+                    protocol: 'vless',
+                    uri: 'https://',
+                },
+                {
+                    ...baseLink,
+                    id: 'website',
+                    displayName: {
+                        en: 'Documentation',
+                        fa: 'Documentation',
+                        fr: 'Documentation',
+                        ru: 'Documentation',
+                        zh: 'Documentation',
+                    },
+                    mode: 'literal',
+                    order: 1,
+                    uri: 'https://example.com/help',
+                },
+            ],
+        });
+
+        expect(parsed.customLinks).toHaveLength(1);
+        expect(parsed.customLinks[0]?.id).toBe('website');
+    });
+
     it('adds only enabled VPN links to the main subscription list', () => {
         const links = resolveCustomSubscriptionLinks([
             {

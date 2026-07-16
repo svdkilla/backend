@@ -107,6 +107,21 @@ export const CustomLinkSchema = z
         }
     });
 
+const isRemovedLegacyCustomLink = (value: unknown): boolean => {
+    if (!value || typeof value !== 'object') return false;
+    const link = value as Record<string, unknown>;
+    return (
+        link.mode === 'template' ||
+        (link.mode === 'subscriptionLinks' && typeof link.protocol === 'string')
+    );
+};
+
+const CustomLinksSchema = z.preprocess(
+    (value) =>
+        Array.isArray(value) ? value.filter((link) => !isRemovedLegacyCustomLink(link)) : value,
+    z.array(CustomLinkSchema).max(MAX_CUSTOM_LINKS),
+);
+
 const ButtonSchema = z
     .object({
         link: z.string(),
@@ -227,7 +242,7 @@ export const SubscriptionPageRawConfigSchema = z
         baseTranslations: SubscriptionPageTranslateKeysSchema,
         svgLibrary: SvgLibrarySchema,
         platforms: z.record(z.nativeEnum(SUBSCRIPTION_PAGE_CONFIG_PLATFORM_TYPES), PlatformSchema),
-        customLinks: z.array(CustomLinkSchema).max(MAX_CUSTOM_LINKS).default([]),
+        customLinks: CustomLinksSchema.default([]),
     })
     .superRefine((data, ctx) => {
         validateLocalizedTexts(data, data.locales, ctx);
