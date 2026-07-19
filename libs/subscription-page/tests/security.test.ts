@@ -4,6 +4,8 @@ import { assertSafeCertificateFileReferences } from '../../../src/common/helpers
 import { DEFAULT_SUBPAGE_CONFIG } from '../../../src/modules/subscription-page-configs/constants';
 import { convertCustomVlessLinkToXrayJson } from '../../../src/modules/subscription-template/generators/custom-vless-xray-json.converter';
 import { XrayGeneratorService } from '../../../src/modules/subscription-template/generators/xray.generator.service';
+import { shouldIncludeCustomSubscriptionLinks } from '../../../src/modules/subscription/utils/should-include-custom-subscription-links';
+import { USERS_STATUS } from '../../contract/constants';
 import { HttpResponseHeadersSchema } from '../../contract/models/http-response-headers.schema';
 import { HttpOauthUrlSchema } from '../../contract/models/remnawave-settings/oauth2-settings.schema';
 import { isSafePublicHeaderRegex } from '../../contract/models/response-rules/safe-regex';
@@ -265,6 +267,13 @@ describe('custom link URI validation', () => {
                 uri: 'https://example.com/wrong-destination',
             }).success,
         ).toBe(false);
+    });
+
+    it('does not include custom connection links for non-active users', () => {
+        expect(shouldIncludeCustomSubscriptionLinks({ status: USERS_STATUS.ACTIVE })).toBe(true);
+        expect(shouldIncludeCustomSubscriptionLinks({ status: USERS_STATUS.EXPIRED })).toBe(false);
+        expect(shouldIncludeCustomSubscriptionLinks({ status: USERS_STATUS.DISABLED })).toBe(false);
+        expect(shouldIncludeCustomSubscriptionLinks({ status: USERS_STATUS.LIMITED })).toBe(false);
     });
 });
 
