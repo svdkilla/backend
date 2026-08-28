@@ -794,10 +794,10 @@ export class SubscriptionService {
 
             if (hwidHeaders === null) {
                 return ok({
-                    subscriptionAllowed: false,
+                    subscriptionAllowed: true,
                     maxDeviceReached: false,
                     hwidNotSupported: true,
-                    limitBypassed: false,
+                    limitBypassed: true,
                 });
             }
 
