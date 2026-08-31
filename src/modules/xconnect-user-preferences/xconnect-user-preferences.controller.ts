@@ -19,10 +19,23 @@ import { JwtDefaultGuard } from '@common/guards/jwt-guards/def-jwt-guard';
 import { RolesGuard } from '@common/guards/roles';
 import { ScopesGuard } from '@common/guards/scopes';
 import { CONTROLLERS_INFO } from '@libs/contracts/api';
-import { GetUserByUuidCommand, UpdateUserCommand } from '@libs/contracts/commands';
-import { ROLE } from '@libs/contracts/constants';
+import { getEndpointDetails, ROLE } from '@libs/contracts/constants';
 
 import { XConnectUserPreferencesService } from './xconnect-user-preferences.service';
+
+const getExtendedServerListEndpoint = getEndpointDetails(
+    '/api/xconnect/users/:uuid/extended-server-list',
+    'get',
+    'Get XConnect extended server list preference',
+    { scope: 'xconnect-extended-server-list-read', kind: 'read' },
+);
+
+const updateExtendedServerListEndpoint = getEndpointDetails(
+    '/api/xconnect/users/:uuid/extended-server-list',
+    'patch',
+    'Update XConnect extended server list preference',
+    { scope: 'xconnect-extended-server-list-write', kind: 'write' },
+);
 
 @ApiBearerAuth('Authorization')
 @ApiScopeResource(CONTROLLERS_INFO.USERS.resource)
@@ -35,7 +48,7 @@ export class XConnectUserPreferencesController {
     constructor(private readonly preferencesService: XConnectUserPreferencesService) {}
 
     @ApiOkResponse({ description: 'Extended server list preference' })
-    @ApiScopeEndpoint(GetUserByUuidCommand.endpointDetails)
+    @ApiScopeEndpoint(getExtendedServerListEndpoint)
     @Get(':uuid/extended-server-list')
     public async getExtendedServerListPreference(
         @Param('uuid', new ParseUUIDPipe()) userUuid: string,
@@ -55,7 +68,7 @@ export class XConnectUserPreferencesController {
         },
     })
     @ApiOkResponse({ description: 'Extended server list preference updated' })
-    @ApiScopeEndpoint(UpdateUserCommand.endpointDetails)
+    @ApiScopeEndpoint(updateExtendedServerListEndpoint)
     @Patch(':uuid/extended-server-list')
     public async setExtendedServerListPreference(
         @Param('uuid', new ParseUUIDPipe()) userUuid: string,
