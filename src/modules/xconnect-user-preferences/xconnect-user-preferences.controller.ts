@@ -43,7 +43,7 @@ const updateExtendedServerListEndpoint = getEndpointDetails(
 @Roles(ROLE.ADMIN, ROLE.API)
 @UseGuards(JwtDefaultGuard, RolesGuard, ScopesGuard)
 @UseFilters(HttpExceptionFilter)
-@Controller('/api/xconnect/users')
+@Controller('/xconnect/users')
 export class XConnectUserPreferencesController {
     constructor(private readonly preferencesService: XConnectUserPreferencesService) {}
 
