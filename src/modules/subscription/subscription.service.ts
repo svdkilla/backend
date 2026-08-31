@@ -55,6 +55,7 @@ import {
 } from './models';
 import { GetSubpageConfigResponseModel } from './models/get-subpage-config.response.model';
 import { getSubscriptionRefillDate, getSubscriptionUserInfo } from './utils/get-user-info.headers';
+import { shouldIncludeCustomSubscriptionLinks } from './utils/should-include-custom-subscription-links';
 
 @Injectable()
 export class SubscriptionService {
@@ -276,7 +277,9 @@ export class SubscriptionService {
                     ? _.shuffle(subscriptionHosts)
                     : subscriptionHosts,
                 hostsOverrides,
-                additionalXrayLinks: await this.getCustomSubscriptionLinks(user.response),
+                additionalXrayLinks: shouldIncludeCustomSubscriptionLinks(user.response)
+                    ? await this.getCustomSubscriptionLinks(user.response)
+                    : [],
             });
 
             return new SubscriptionWithConfigResponse({
@@ -514,7 +517,9 @@ export class SubscriptionService {
 
                 xrayLinks = this.xrayGeneratorService.generateLinks(formattedHosts, false);
 
-                const customSubscriptionLinks = await this.getCustomSubscriptionLinks(userEntity);
+                const customSubscriptionLinks = shouldIncludeCustomSubscriptionLinks(userEntity)
+                    ? await this.getCustomSubscriptionLinks(userEntity)
+                    : [];
                 const seenLinks = new Set(xrayLinks);
                 for (const link of customSubscriptionLinks) {
                     if (!seenLinks.has(link)) {
@@ -801,10 +806,10 @@ export class SubscriptionService {
 
             if (hwidHeaders === null) {
                 return ok({
-                    subscriptionAllowed: false,
+                    subscriptionAllowed: true,
                     maxDeviceReached: false,
                     hwidNotSupported: true,
-                    limitBypassed: false,
+                    limitBypassed: true,
                 });
             }
 
