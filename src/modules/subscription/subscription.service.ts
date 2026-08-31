@@ -259,6 +259,10 @@ export class SubscriptionService {
                 return new SubscriptionNotFoundResponse();
             }
 
+            const subscriptionHosts = extendedServerListEnabled
+                ? hosts.response.map((host) => ({ ...host, isHidden: false }))
+                : hosts.response;
+
             void this.updateAndReportSubscriptionRequest(
                 user.response.tId,
                 userAgent,
@@ -269,11 +273,10 @@ export class SubscriptionService {
                 srrContext,
                 user: user.response,
                 hosts: subscriptionSettings.randomizeHosts
-                    ? _.shuffle(hosts.response)
-                    : hosts.response,
+                    ? _.shuffle(subscriptionHosts)
+                    : subscriptionHosts,
                 hostsOverrides,
                 additionalXrayLinks: await this.getCustomSubscriptionLinks(user.response),
-                extendedServerListEnabled,
             });
 
             return new SubscriptionWithConfigResponse({

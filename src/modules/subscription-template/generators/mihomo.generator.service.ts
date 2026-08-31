@@ -115,7 +115,6 @@ export class MihomoGeneratorService {
         isStash = false,
         isExtendedClient = false,
         overrideTemplateName?: string,
-        extendedHiddenHostUuids: ReadonlySet<string> = new Set(),
     ): Promise<string> {
         try {
             const yamlConfigDb = await this.subscriptionTemplateService.getCachedTemplateByType(
@@ -133,12 +132,7 @@ export class MihomoGeneratorService {
             const proxyRemarks: string[] = [];
 
             for (const host of hosts) {
-                if (
-                    !includeHidden &&
-                    host.metadata.isHidden &&
-                    !extendedHiddenHostUuids.has(host.metadata.uuid)
-                )
-                    continue;
+                if (!includeHidden && host.metadata.isHidden) continue;
 
                 const subType = isStash ? 'STASH' : 'MIHOMO';
                 if (host.metadata.excludeFromSubscriptionTypes.includes(subType)) continue;

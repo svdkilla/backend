@@ -65,5 +65,4 @@ export interface IGenerateConfigParams {
     isExtendedClient: boolean;
     overrideTemplateName?: string;
     ignoreHostXrayJsonTemplate?: boolean;
-    extendedHiddenHostUuids?: ReadonlySet<string>;
 }
