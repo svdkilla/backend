@@ -79,11 +79,23 @@ model Users {
   userMetas                      UserMeta[]
   torrentBlockerReports          TorrentBlockerReports[]
   traffic                        UserTraffic?
+  xconnectPreferences            XConnectUserPreferences?
 
   externalSquad ExternalSquads? @relation(fields: [externalSquadUuid], references: [uuid], onDelete: SetNull)
 
   @@index([expireAt])
   @@map("users")
+}
+
+model XConnectUserPreferences {
+  userUuid                  String   @id @map("user_uuid") @db.Uuid
+  extendedServerListEnabled Boolean  @default(false) @map("extended_server_list_enabled")
+  createdAt                 DateTime @default(dbgenerated("now()")) @map("created_at")
+  updatedAt                 DateTime @default(dbgenerated("now()")) @updatedAt @map("updated_at")
+
+  user Users @relation(fields: [userUuid], references: [uuid], onDelete: Cascade)
+
+  @@map("xconnect_user_preferences")
 }
 
 model UserTraffic {

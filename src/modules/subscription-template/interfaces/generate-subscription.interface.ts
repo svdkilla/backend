@@ -9,6 +9,7 @@ export interface IGenerateSubscription {
     hosts: HostWithRawInbound[];
     hostsOverrides?: ExternalSquadEntity['hostOverrides'];
     additionalXrayLinks?: string[];
+    extendedServerListEnabled?: boolean;
     fallbackOptions?: {
         showHwidMaxDeviceRemarks?: boolean;
         showHwidNotSupportedRemarks?: boolean;

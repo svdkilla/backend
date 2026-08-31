@@ -39,6 +39,7 @@ import { GetFullUserResponseModel } from '@modules/users/models';
 import { GetUserByUniqueFieldQuery } from '@modules/users/queries/get-user-by-unique-field';
 import { GetUserSubpageConfigQuery } from '@modules/users/queries/get-user-subpage-config';
 import { GetUsersWithPaginationQuery } from '@modules/users/queries/get-users-with-pagination';
+import { XConnectUserPreferencesService } from '@modules/xconnect-user-preferences/xconnect-user-preferences.service';
 
 import { UsersQueuesService } from '@queue/_users/users-queues.service';
 
@@ -71,6 +72,7 @@ export class SubscriptionService {
         private readonly usersQueuesService: UsersQueuesService,
         private readonly srrMatcher: ResponseRulesMatcherService,
         private readonly subscriptionPageConfigService: SubscriptionPageConfigService,
+        private readonly xconnectUserPreferencesService: XConnectUserPreferencesService,
     ) {
         this.subPublicDomain = this.configService.getOrThrow('SUB_PUBLIC_DOMAIN');
     }
@@ -238,12 +240,18 @@ export class SubscriptionService {
                 }
             }
 
+            const extendedServerListEnabled =
+                await this.xconnectUserPreferencesService.isExtendedServerListEnabled(
+                    user.response.uuid,
+                );
+
             const hosts = await this.queryBus.execute(
                 new GetHostsForUserQuery(
                     user.response.tId,
                     false,
                     srrContext.matchedResponseType === 'XRAY_JSON' ||
-                        srrContext.matchedResponseType === 'MIHOMO',
+                        srrContext.matchedResponseType === 'MIHOMO' ||
+                        extendedServerListEnabled,
                 ),
             );
 
@@ -265,6 +273,7 @@ export class SubscriptionService {
                     : hosts.response,
                 hostsOverrides,
                 additionalXrayLinks: await this.getCustomSubscriptionLinks(user.response),
+                extendedServerListEnabled,
             });
 
             return new SubscriptionWithConfigResponse({

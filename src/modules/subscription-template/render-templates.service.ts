@@ -28,8 +28,15 @@ export class RenderTemplatesService {
         contentType: string;
         subscription: string;
     }> {
-        const { srrContext, user, hosts, hostsOverrides, fallbackOptions, additionalXrayLinks } =
-            params;
+        const {
+            srrContext,
+            user,
+            hosts,
+            hostsOverrides,
+            fallbackOptions,
+            additionalXrayLinks,
+            extendedServerListEnabled = false,
+        } = params;
 
         const formattedHosts = await this.resolveProxyConfigService.resolveProxyConfig({
             subscriptionSettings: srrContext.subscriptionSettings,
@@ -40,11 +47,22 @@ export class RenderTemplatesService {
             excludeHostsByTags: srrContext.excludeHostsByTags,
         });
 
+        const extendedHiddenHostUuids = new Set(
+            extendedServerListEnabled
+                ? formattedHosts
+                      .filter((host) => host.metadata.isHidden)
+                      .map((host) => host.metadata.uuid)
+                : [],
+        );
+        const visibleHosts = formattedHosts.filter(
+            (host) => !host.metadata.isHidden || extendedHiddenHostUuids.has(host.metadata.uuid),
+        );
+
         switch (srrContext.matchedResponseType) {
             case 'XRAY_BASE64':
                 return {
                     subscription: await this.xrayGeneratorService.generateConfig(
-                        formattedHosts,
+                        visibleHosts,
                         SUBSCRIPTION_CONFIG_TYPES['XRAY_BASE64'].isBase64,
                         srrContext.isExtendedClient,
                         additionalXrayLinks,
@@ -55,7 +73,7 @@ export class RenderTemplatesService {
             case 'CLASH':
                 return {
                     subscription: await this.clashGeneratorService.generateConfig(
-                        formattedHosts,
+                        visibleHosts,
                         srrContext.overrideTemplateName,
                     ),
                     contentType: SUBSCRIPTION_CONFIG_TYPES['CLASH'].CONTENT_TYPE,
@@ -68,6 +86,7 @@ export class RenderTemplatesService {
                         false,
                         srrContext.isExtendedClient,
                         srrContext.overrideTemplateName,
+                        extendedHiddenHostUuids,
                     ),
                     contentType: SUBSCRIPTION_CONFIG_TYPES['MIHOMO'].CONTENT_TYPE,
                 };
@@ -75,7 +94,7 @@ export class RenderTemplatesService {
             case 'SINGBOX':
                 return {
                     subscription: await this.singBoxGeneratorService.generateConfig(
-                        formattedHosts,
+                        visibleHosts,
                         srrContext.overrideTemplateName,
                     ),
                     contentType: SUBSCRIPTION_CONFIG_TYPES['SINGBOX'].CONTENT_TYPE,
@@ -88,6 +107,7 @@ export class RenderTemplatesService {
                         true,
                         false,
                         srrContext.overrideTemplateName,
+                        extendedHiddenHostUuids,
                     ),
                     contentType: SUBSCRIPTION_CONFIG_TYPES['STASH'].CONTENT_TYPE,
                 };
@@ -100,6 +120,7 @@ export class RenderTemplatesService {
                         isExtendedClient: srrContext.isExtendedClient,
                         overrideTemplateName: srrContext.overrideTemplateName,
                         ignoreHostXrayJsonTemplate: srrContext.ignoreHostXrayJsonTemplate,
+                        extendedHiddenHostUuids,
                     }),
                     contentType: SUBSCRIPTION_CONFIG_TYPES['XRAY_JSON'].CONTENT_TYPE,
                 };

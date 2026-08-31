@@ -199,6 +199,7 @@ export class XrayJsonGeneratorService {
             isExtendedClient,
             overrideTemplateName,
             ignoreHostXrayJsonTemplate = false,
+            extendedHiddenHostUuids = new Set<string>(),
         } = params;
 
         try {
@@ -210,7 +211,8 @@ export class XrayJsonGeneratorService {
             const configs: XrayJsonConfig[] = [];
 
             for (const host of hosts) {
-                if (host.metadata.isHidden) continue;
+                if (host.metadata.isHidden && !extendedHiddenHostUuids.has(host.metadata.uuid))
+                    continue;
                 if (host.metadata.excludeFromSubscriptionTypes.includes('XRAY_JSON')) continue;
 
                 const baseTemplate = ignoreHostXrayJsonTemplate
